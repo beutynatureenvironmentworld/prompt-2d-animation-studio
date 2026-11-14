@@ -13,3 +13,11 @@ python3 motion-worker/prepare.py 'A person steps sideways and throws both hands 
 Use new clip and episode directories. Copy the entire clip directory to reuse motion on another machine. Use Blender with the BVH importer enabled. The CPU background workflow can also run on demand under GitHub Actions. It saves BVH, pose data and independent PNG plates. The default film renderer paints its procedural background unless a PNG is supplied with `--background-plate`. Background art uses a centered cover crop behind the animated character and foreground prop.
 
 The optional ComfyUI API graph in `comfy-audio-api.json` accepts pre-aligned voice.wav, music.wav and effects.wav in ComfyUI/input. Send the parsed graph as the prompt field to the trusted ComfyUI instance's /prompt endpoint. The graph layers audio and saves the mix. Rhubarb can separately export phoneme cues with `rhubarb -f json -o cues.json voice.wav`. The film renderer uses these timed mouth shapes when the Rhubarb executable is installed. Otherwise it follows voice amplitude. Set RHUBARB_BIN to override executable discovery.
+
+To generate and composite in one Oracle command, supply one English story prompt. Optional motion and background prompts let you direct those workers separately.
+
+```sh
+python3 motion-worker/episode.py 'On a rooftop at night a clock falls and a courier jumps back in surprise.' episodes/alarm --motion 'A person jumps backward, throwing both forearms up' --background 'Ink cartoon rooftop at night, no people'
+```
+
+The final video is render/short.mp4 inside the chosen directory. Omit --background for the procedural scene, or pass --plate to reuse previous artwork. With --clip, the source clip directory must remain available for a later rerender. Commercial use of the selected SD Turbo model requires registration under its published Stability AI license.
