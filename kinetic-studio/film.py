@@ -1,6 +1,7 @@
 import argparse,array,json,math,os,re,shutil,subprocess,sys,tempfile,wave
 from pathlib import Path
 import paint
+from lip_sync import mouth_track
 from plan import plan,FIELDS
 HERE=Path(__file__).resolve().parent
 ALIASES={'night':['moonlit','midnight','nighttime'],'warm':['sunny','daylight','sunlit'],'duck':['ducks','crouches'],'jump':['jumps','leaps'],'reach':['reaches'],'drop':['falls','drops','falling'],'bounce':['bounces','bouncing'],'slide':['slides','sliding'],'close':['close-up','closeup'],'parcel':['package','box']}
@@ -17,6 +18,7 @@ def render(p,out,sim,width,character=None,plate=None):
         work=Path(tmp);(work/'line.txt').write_text(line)
         raw=subprocess.check_output(['ffmpeg','-v','error','-f','lavfi','-i','flite=textfile=line.txt:voice=slt','-ar',str(rate),'-ac','1','-f','s16le','-'],cwd=work)
         voice=array.array('h');voice.frombytes(raw);samples=array.array('h',[0])*(rate*duration)
+        mouth=mouth_track(work,voice,rate,fps,duration,6)
         start=6*rate;samples[start:start+len(voice)]=voice
         amp=[min(1,math.sqrt(sum(v*v for v in samples[i:i+1000])/1000)/2200) for i in range(0,rate*duration,1000)]
         for f in sim['hits']:
@@ -26,7 +28,7 @@ def render(p,out,sim,width,character=None,plate=None):
         paint.WIDTH=width
         cmd=['ffmpeg','-loglevel','error','-y','-f','rawvideo','-pix_fmt','bgr0','-s',f'{width}x{width*16//9}','-r',str(fps),'-i','-','-i',str(work/'audio.wav'),'-c:v','libx264','-threads','2','-preset','veryfast','-crf','18','-pix_fmt','yuv420p','-c:a','aac','-movflags','+faststart',str(work/'film.mp4')]
         with subprocess.Popen(cmd,stdin=subprocess.PIPE) as enc:
-            for i in range(240):enc.stdin.write(paint.frame(i/fps,i,p,sim,amp[i],character,plate))
+            for i in range(240):enc.stdin.write(paint.frame(i/fps,i,p,sim,amp[i],character,plate,mouth[i]))
             enc.stdin.close()
             if enc.wait():raise RuntimeError('Encoding failed')
         (work/'film.mp4').replace(out)
