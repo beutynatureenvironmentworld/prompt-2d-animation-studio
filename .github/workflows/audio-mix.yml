@@ -31,7 +31,9 @@ jobs:
           for track in "$VOICE" "$MUSIC" "$EFFECTS"; do
             case "$(realpath -e -- "$track")" in "$GITHUB_WORKSPACE"/*.wav) ;; *) exit 1 ;; esac
           done
-          git clone --depth 1 https://github.com/Comfy-Org/ComfyUI.git "$RUNNER_TEMP/comfy"
+          git init "$RUNNER_TEMP/comfy"
+          git -C "$RUNNER_TEMP/comfy" fetch --depth=1 https://github.com/Comfy-Org/ComfyUI.git eee59185ff4f43ae2d9ad122b245619d27d9daad
+          git -C "$RUNNER_TEMP/comfy" checkout --detach FETCH_HEAD
           pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
           pip install -r "$RUNNER_TEMP/comfy/requirements.txt"
           python "$RUNNER_TEMP/comfy/main.py" --cpu --listen 127.0.0.1 > "$RUNNER_TEMP/comfy.log" 2>&1 &
