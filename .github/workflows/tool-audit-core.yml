@@ -1,0 +1,33 @@
+name: Independent CPU animation core tool tests
+on:
+  push:
+    branches: [feature/independent-animation-toolchain-tests]
+    paths: ['tool-audit/**', '.github/workflows/tool-audit-core.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tool:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        tool: ['ffmpeg', 'blender', 'synfig', 'inkscape', 'manim', 'moviepy', 'rhubarb', 'potrace', 'vtracer', 'mediapipe', 'piper', 'edge-tts']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install and independently smoke test
+        env:
+          TOOL: ${{ matrix.tool }}
+        run: bash tool-audit/run-core.sh "$TOOL"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: audit-core-${{ matrix.tool }}
+          path: tool-audit/results/${{ matrix.tool }}/
+          if-no-files-found: warn
+          retention-days: 7
