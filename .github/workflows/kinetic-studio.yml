@@ -1,0 +1,32 @@
+name: Prompt to physics cartoon
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: Describe location, object, movement, reaction, camera and lighting
+        required: true
+        default: A clock drops on a rooftop at night. The courier ducks. Close-up.
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: |
+          sudo apt-get update -qq
+          bash free-motion/install.sh
+          npm install --prefix kinetic-studio --no-audit --no-fund
+      - name: Interpret prompt, simulate and render
+        env:
+          STORY: ${{ inputs.prompt }}
+        run: /usr/bin/python3 kinetic-studio/film.py "$STORY" output
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prompt-cartoon
+          path: output/
+          retention-days: 3
