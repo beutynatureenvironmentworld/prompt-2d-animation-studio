@@ -1,0 +1,29 @@
+name: Blender character choreography
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Actor and action, separated by semicolons'
+        required: true
+        default: 'Mira points; Ravi nods; Mira walks; Ravi jumps; Mira claps; Ravi bows; Mira dances; Ravi cheers'
+permissions:
+  contents: read
+jobs:
+  animate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends blender python3-cairo ffmpeg
+      - name: Build armatures, sequence actions and render
+        env:
+          PROMPT: ${{ inputs.prompt }}
+        run: /usr/bin/python3 kite/rig_studio.py "$PROMPT" result
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blender-cartoon
+          retention-days: 3
+          path: |
+            result/cartoon.mp4
+            result/story.json
+            result/choreography.blend
