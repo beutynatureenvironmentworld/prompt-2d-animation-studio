@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "prompt": "Two funny stick-figure characters in a moonlit bedroom; one snores and the other reacts. Add gentle music and sleepy snore SFX.",
+  "video": {"width": 640, "height": 360, "fps": 18},
+  "scenes": [
+    {"id": "night_snoring", "duration": 3.5, "environment": "bedroom", "action": "snore", "character": "sleeping_stick", "caption": "", "reference": ""},
+    {"id": "annoyed_reaction", "duration": 3.5, "environment": "bedroom", "action": "annoyed", "character": "awake_stick", "caption": "", "reference": ""}
+  ],
+  "audio": [
+    {"kind": "music", "file": "assets/audio/original-night-music.wav", "offset": 0.0, "volume": 0.48},
+    {"kind": "sfx", "file": "assets/audio/original-snore.wav", "offset": 0.0, "volume": 0.72}
+  ]
+}
