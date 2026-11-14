@@ -1,0 +1,9 @@
+{
+  "title":"The Snore Collector",
+  "prompt":"In a moonlit shared bedroom, the exhausted roommate catches a floating snore in a glass jar. Silence at last. Then the jar itself starts snoring.",
+  "shots":[
+    {"seconds":5,"note":"In the moonlight, the snorer's Z drifts toward the sleepless roommate. Their eyes track it.","camera":[0,0,1, 4,2,1.04],"light":[0.7,0.85],"jar":[-65,-25],"lid":[0,0],"capture":[0,0],"surprise":[0,0],"burst":[0,0]},
+    {"seconds":5,"note":"A slow push toward the raised jar. A wandering Z drops into it. The lid snaps on.","camera":[4,2,1.04, 20,9,1.12],"light":[0.85,1],"jar":[-25,0],"lid":[0,1],"capture":[0,1],"surprise":[0,0],"burst":[0,0]},
+    {"seconds":5,"note":"Hold for the quiet beat. The jar buzzes; a giant Z pops from under its lid. Both roommates stare.","camera":[20,9,1.12, 0,0,1],"light":[1,0.78],"jar":[0,0],"lid":[1,1],"capture":[1,1],"surprise":[0,1],"burst":[0,1]}
+  ]
+}
