@@ -1,0 +1,29 @@
+name: Free text to character motion
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Describe Mira’s movement in ordinary English'
+        required: true
+        default: 'Mira shields her face with her right forearm, leans away, then slowly lowers her elbow.'
+permissions:
+  contents: read
+jobs:
+  motion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && bash free-motion/install.sh
+      - name: Generate motion and render
+        env:
+          STORY: ${{ inputs.prompt }}
+        run: /usr/bin/python3 free-motion/prompt_motion.py "$STORY" output
+      - uses: actions/upload-artifact@v4
+        with:
+          name: generated-motion
+          retention-days: 3
+          path: |
+            output/cartoon.mp4
+            output/motion.json
+            output/motion.blend
