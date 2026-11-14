@@ -101,10 +101,18 @@ if __name__=='__main__':
         from rig_studio import composite
         p=argparse.ArgumentParser();p.add_argument('prompt');p.add_argument('folder',type=Path)
         p.add_argument('--width',type=int,choices=(640,1280,1920),default=1280)
+        p.add_argument('--keyframes',type=Path,help='Optional agent-authored motion JSON with four eight-angle poses')
         args=p.parse_args()
         if not 1<=len(args.prompt.strip())<=1200: p.error('Enter 1 to 1200 characters')
         out=args.folder.resolve();out.mkdir(parents=True,exist_ok=False)
-        poses=generate(args.prompt)
+        if args.keyframes:
+            data=json.loads(args.keyframes.read_text())
+            poses=data['poses']
+            if data.get('prompt')!=args.prompt or list(CHANNELS)!=data.get('channels') or len(poses)!=4 or any(
+                not isinstance(row,list) or len(row)!=8 or any(type(v) not in (int,float) or not math.isfinite(v) or abs(v)>180 for v in row) for row in poses):
+                raise ValueError('The motion plan must match this prompt, rig and four-pose schema')
+        else:
+            poses=generate(args.prompt)
         (out/'motion.json').write_text(json.dumps(dict(prompt=args.prompt,channels=CHANNELS,poses=poses),ensure_ascii=False,indent=2))
         subprocess.run(['blender','-b','-t','2','--python-exit-code','1','-P',str(Path(__file__).resolve()),'--',str(out)],check=True)
         composite(out,[('mira','generated',121)],args.width)
