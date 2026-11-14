@@ -77,8 +77,8 @@ def actor(t,k,p,cue,amp):
         a=(sh[0]+i*11,sh[1]+3)
         if p['reaction']=='reach' and i==1:
             b=(a[0]+12+27*peak,a[1]+33-39*peak)
-        else:b=(a[0]+i*(14+19*peak),a[1]+33-49*peak+2*S(t*3+i))
-        joint=ik(a,b,23,22,1 if i>0 else -1)
+        else:b=(a[0]+i*(7+24*peak),a[1]+41-53*peak+2*S(t*3+i))
+        joint=ik(a,b,23,22,-i)
         limb(a,joint,6,4.2,'#c1665a' if i<0 else '#e17e66');limb(joint,b,4.5,3,'#eabb96');oval(*b,4.6,4,'#f0c4a0')
 def object_at(x,y,theta,p):
     g.save();g.translate(x,y);g.rotate(theta)
@@ -92,7 +92,7 @@ def object_at(x,y,theta,p):
         for i in range(12):oval(S(i*PI/6)*12,C(i*PI/6)*12,1,1,ink)
         path([(-6,-3),(0,0),(2,-8)],ink,2)
     g.restore()
-def frame(t,i,p,sim,amp):
+def frame(t,i,p,sim,amp,character=None):
     global g
     surf=cairo.ImageSurface(cairo.FORMAT_RGB24,WIDTH,WIDTH*16//9);g=cairo.Context(surf);g.scale(WIDTH/360,WIDTH/360)
     g.set_line_cap(cairo.LINE_CAP_ROUND);g.set_line_join(cairo.LINE_JOIN_ROUND)
@@ -108,7 +108,7 @@ def frame(t,i,p,sim,amp):
         for n in (6,4,2):
             px,py,_=sim['rows'][max(0,i-n)]
             if math.hypot(px-kx,py-ky)>8:path([(px-4,py+2),(px+2,py+2)],'#dfbc9f',1.2)
-    actor(t,(kx,ky),p,cue,amp);object_at(kx,ky,ang,p['prop'])
+    (character or actor)(t,(kx,ky),p,cue,amp);object_at(kx,ky,ang,p['prop'])
     for hit in sim['hits']:
         u=(i-hit)/10
         if 0<u<1:
