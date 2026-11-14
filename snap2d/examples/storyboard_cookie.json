@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "prompt": "A funny quick stickman story about the last cookie",
+  "title": "THE LAST COOKIE",
+  "style": "original-hand-inked-comedy",
+  "fps": 24,
+  "width": 360,
+  "height": 640,
+  "sound": false,
+  "shots": [
+    {
+      "name": "setup",
+      "start": 0,
+      "duration": 1.1,
+      "action": "setup",
+      "camera": "composed"
+    },
+    {
+      "name": "sneak",
+      "start": 1.1,
+      "duration": 1.65,
+      "action": "sneak",
+      "camera": "composed"
+    },
+    {
+      "name": "grab",
+      "start": 2.75,
+      "duration": 0.85,
+      "action": "grab",
+      "camera": "composed"
+    },
+    {
+      "name": "glare",
+      "start": 3.6,
+      "duration": 1.15,
+      "action": "glare",
+      "camera": "reaction-closeup"
+    },
+    {
+      "name": "chase",
+      "start": 4.75,
+      "duration": 1.65,
+      "action": "chase",
+      "camera": "composed"
+    },
+    {
+      "name": "trip",
+      "start": 6.4,
+      "duration": 1.35,
+      "action": "trip",
+      "camera": "composed"
+    },
+    {
+      "name": "shock",
+      "start": 7.75,
+      "duration": 1.1,
+      "action": "shock",
+      "camera": "reaction-closeup"
+    },
+    {
+      "name": "catch",
+      "start": 8.85,
+      "duration": 1.5,
+      "action": "catch",
+      "camera": "composed"
+    },
+    {
+      "name": "stare",
+      "start": 10.35,
+      "duration": 1.45,
+      "action": "stare",
+      "camera": "reaction-closeup"
+    },
+    {
+      "name": "button",
+      "start": 11.8,
+      "duration": 1.8,
+      "action": "button",
+      "camera": "composed"
+    }
+  ]
+}
