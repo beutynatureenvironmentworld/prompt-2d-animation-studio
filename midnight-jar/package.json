@@ -1,0 +1,1 @@
+{"name":"vidbest-midnight-jar","private":true,"scripts":{"studio":"remotion studio index.jsx","render":"remotion render index.jsx MoonlitRoom film.mp4 --concurrency=1"},"dependencies":{"@remotion/cli":"4.0.395","remotion":"4.0.395","react":"18.3.1","react-dom":"18.3.1"}}
