@@ -21,3 +21,9 @@ python3 motion-worker/episode.py 'On a rooftop at night a clock falls and a cour
 ```
 
 The final video is render/short.mp4 inside the chosen directory. Omit --background for the procedural scene, or pass --plate to reuse previous artwork. With --clip, the source clip directory must remain available for a later rerender. Commercial use of the selected SD Turbo model requires registration under its published Stability AI license.
+
+## Measurements on the Oracle CPU host
+
+The official Blender 4.2.0 binary rendered the 320×480 studio at 16 Cycles CPU samples with Embree and Open Image Denoise in 66.61 seconds. The system Blender 4.0.2 build includes Embree and lacks OIDN. The separate system Blender BVH importer produced 96 samples at 24 fps from a four-second generated clip.
+
+A 256×256 SD 2.1 Turbo Q4_0 experiment at one Euler step and seed 42 saved a PNG. The CLI took 494.7 seconds with the model already downloaded. Text conditioning took 32.81 s, sampling took 104.69 s and VAE decoding took 319.64 s. Visual review found colored noise with no recognizable rooftop. Keep this profile experimental. The default GitHub compositor uses the Blender plate. Oracle's default uses the procedural painted scene. This measurement does not establish SDXL-Turbo, SDXS or GPU performance.
