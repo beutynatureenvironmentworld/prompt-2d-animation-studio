@@ -1,0 +1,20 @@
+name: Render Lantern Catch
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: sudo apt-get update -qq && sudo apt-get install -y ffmpeg librsvg2-2
+      - run: python3 lantern-run/film.py lantern-run/story.json lantern.mp4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lantern-catch
+          path: lantern.mp4
+          retention-days: 3
