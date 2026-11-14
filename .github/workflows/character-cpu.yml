@@ -26,11 +26,13 @@ jobs:
       - name: Prepare official Blender and CPU motion runtime
         run: |
           mkdir -p output worker-bin
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends blender
           curl -fsSL --retry 3 https://download.blender.org/release/Blender4.2/blender-4.2.0-linux-x64.tar.xz | tar xJ -C worker-bin
           echo "$PWD/worker-bin/blender-4.2.0-linux-x64" >> "$GITHUB_PATH"
           bash motion-worker/install.sh
       - name: Export reusable body motion
-        run: python3 motion-worker/prepare.py "$MOTION" output/character
+        run: BVH_BLENDER=/usr/bin/blender python3 motion-worker/prepare.py "$MOTION" output/character
       - name: Render CPU lighting plate
         if: ${{ !cancelled() }}
         run: blender -b -t 2 --python-exit-code 1 -P motion-worker/cycles_plate.py -- output/cycles.png
