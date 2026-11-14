@@ -1,0 +1,28 @@
+name: Render a silent cartoon
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Stage directions separated by semicolons'
+        required: true
+        default: 'Mira walks right; Ravi waves; Mira flies; Ravi jumps; Mira pulls; Mira waves'
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y python3-cairo ffmpeg
+      - name: Animate
+        env:
+          STORY: ${{ inputs.prompt }}
+        run: /usr/bin/python3 kite/animate.py "$STORY" cartoon.mp4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: silent-cartoon
+          path: |
+            cartoon.mp4
+            cartoon.json
+          retention-days: 3
