@@ -53,7 +53,7 @@ def ik(a,b,l,m,bend):
 def limb(a,b,r,s,h):
     g.save();g.translate(*a);g.rotate(math.atan2(b[1]-a[1],b[0]-a[0]));l=math.dist(a,b)
     path([(0,-r),(l,-s),(l,s),(0,r)],h);oval(0,0,r,r,h);oval(l,0,s,s,h);g.restore()
-def actor(t,k,p,cue,amp):
+def actor(t,k,p,cue,amp,mouth=None):
     dt=t-cue;wind=math.exp(-((dt+.25)/.18)**2);peak=math.exp(-(dt/.37)**2)
     j=peak if p['reaction']=='jump' else 0;duck=peak if p['reaction']=='duck' else 0
     x=186-8*wind+3*S(t*2);y=416+9*wind+26*duck-60*j
@@ -72,7 +72,7 @@ def actor(t,k,p,cue,amp):
     for ex in [-5,7]:
         oval(hx+ex,hy,4,4*blink,'#fff2de');oval(hx+ex+look*1.6,hy,1.8,(2.3+peak)*blink,ink)
         path([(hx+ex-3,hy-7-peak*3),(hx+ex+2,hy-7)],ink,1.5)
-    oval(hx+2,hy+10,3+2*amp,1+4*amp+2*peak,'#784957')
+    oval(hx+2,hy+10,*(mouth or (3+2*amp,1+4*amp+2*peak)),'#784957')
     for i in [-1,1]:
         a=(sh[0]+i*11,sh[1]+3)
         if p['reaction']=='reach' and i==1:
@@ -92,7 +92,7 @@ def object_at(x,y,theta,p):
         for i in range(12):oval(S(i*PI/6)*12,C(i*PI/6)*12,1,1,ink)
         path([(-6,-3),(0,0),(2,-8)],ink,2)
     g.restore()
-def frame(t,i,p,sim,amp,character=None,plate=None):
+def frame(t,i,p,sim,amp,character=None,plate=None,mouth=None):
     global g
     surf=cairo.ImageSurface(cairo.FORMAT_RGB24,WIDTH,WIDTH*16//9);g=cairo.Context(surf);g.scale(WIDTH/360,WIDTH/360)
     g.set_line_cap(cairo.LINE_CAP_ROUND);g.set_line_join(cairo.LINE_JOIN_ROUND)
@@ -119,7 +119,7 @@ def frame(t,i,p,sim,amp,character=None,plate=None):
         for n in (6,4,2):
             px,py,_=sim['rows'][max(0,i-n)]
             if math.hypot(px-kx,py-ky)>8:path([(px-4,py+2),(px+2,py+2)],'#dfbc9f',1.2)
-    (character or actor)(t,(kx,ky),p,cue,amp);object_at(kx,ky,ang,p['prop'])
+    (character or actor)(t,(kx,ky),p,cue,amp,mouth);object_at(kx,ky,ang,p['prop'])
     for hit in sim['hits']:
         u=(i-hit)/10
         if 0<u<1:
