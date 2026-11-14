@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-TOOL="$1"; OUT="tool-audit/results/$TOOL"; mkdir -p "$OUT"
+TOOL="$1"; OUT="$PWD/tool-audit/results/$TOOL"; mkdir -p "$OUT"
 echo "TOOL=$TOOL" > "$OUT/report.txt"
 trap 'rc=$?; echo "EXIT=$rc" >> "$OUT/report.txt"; echo "RESULT=$([ "$rc" -eq 0 ] && echo PASS || echo FAIL)" >> "$OUT/report.txt"' EXIT
 case "$TOOL" in
@@ -26,15 +26,29 @@ JS
 revideo)
   mkdir -p "$OUT/node"; cd "$OUT/node"
   npm init -y
-  npm install --no-audit --no-fund @revideo/core @revideo/2d
-  node -e 'import("@revideo/core").then(x=>{if(!x.makeProject)throw Error("Missing makeProject");console.log("Revideo core import PASS")})'
-  echo 'SCOPE=Revideo packages installed and core import test; MP4 renderer not executed' >> ../report.txt;;
+  npm install --no-audit --no-fund @revideo/core @revideo/2d vite@4.5.14
+  printf '<html><body><script type="module" src="/src.js"></script></body></html>' > index.html
+  cat > src.js <<'JS'
+import {makeProject} from '@revideo/core';
+import {makeScene2D} from '@revideo/2d';
+console.log(Boolean(makeProject), Boolean(makeScene2D));
+JS
+  npx vite build
+  test -s dist/index.html
+  echo 'SCOPE=Revideo core/2D installed and browser Vite build (NOT video rendered)' >> ../report.txt;;
 motion-canvas)
   mkdir -p "$OUT/node"; cd "$OUT/node"
   npm init -y
-  npm install --no-audit --no-fund @motion-canvas/core@3.17.2 @motion-canvas/2d@3.17.2
-  node -e 'import("@motion-canvas/core").then(x=>{if(!x.makeProject)throw Error("Missing makeProject");console.log("Motion Canvas core import PASS")})'
-  echo 'SCOPE=Motion Canvas core and 2D installed/imported; prior PR editor build tested separately' >> ../report.txt;;
+  npm install --no-audit --no-fund @motion-canvas/core@3.17.2 @motion-canvas/2d@3.17.2 vite@4.5.14
+  printf '<html><body><script type="module" src="/src.js"></script></body></html>' > index.html
+  cat > src.js <<'JS'
+import {makeProject} from '@motion-canvas/core';
+import {makeScene2D} from '@motion-canvas/2d';
+console.log(Boolean(makeProject), Boolean(makeScene2D));
+JS
+  npx vite build
+  test -s dist/index.html
+  echo 'SCOPE=Motion Canvas core/2D installed and browser Vite build; no MP4' >> ../report.txt;;
 stykanimate)
   git clone --depth 1 https://github.com/filippocalippo/StykAnimate-App.git "$OUT/source"
   cd "$OUT/source"
