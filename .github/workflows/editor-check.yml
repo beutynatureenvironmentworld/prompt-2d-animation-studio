@@ -1,0 +1,25 @@
+name: Optional Motion Canvas editor check
+on:
+  push:
+    branches: ['feature/**']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  typescript-editor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned top-level npm dependencies
+        working-directory: motion-canvas
+        run: npm install --no-audit --no-fund
+      - name: TypeScript check
+        working-directory: motion-canvas
+        run: npm run typecheck
+      - name: Build editor
+        working-directory: motion-canvas
+        run: npm run build

@@ -1,0 +1,57 @@
+name: CPU 2D render + tests
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Short non-sensitive prompt for offline template render'
+        required: false
+        default: 'At night two stick figures; one snores and another is annoyed'
+        type: string
+permissions:
+  contents: read
+jobs:
+  cpu-studio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - name: Install CPU dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install -r requirements-dev.txt
+      - name: Tests and checks
+        run: |
+          python -m compileall -q studio
+          python -m pytest -q
+          python -m studio.core doctor
+      - name: Create original audio and render sample
+        run: |
+          python -m studio.core audio-demo
+          python -m studio.core validate examples/storyboard.bedroom.json
+          python -m studio.core render examples/storyboard.bedroom.json --out output/ci-bedtime.mp4
+          test -s output/ci-bedtime.mp4
+          ffprobe -v error -show_entries stream=codec_name -of default=noprint_wrappers=1 output/ci-bedtime.mp4
+      - name: Prompt-driven audio + MP4
+        env:
+          ANIMATION_PROMPT: ${{ inputs.prompt || 'At night two stick figures; one snores and another is annoyed' }}
+        run: |
+          python -m studio.automatic "$ANIMATION_PROMPT" --out output/ci-from-prompt.mp4
+          test -s output/ci-from-prompt.mp4
+          test -s output/ci-from-prompt.storyboard.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cpu-animation-mp4-and-storyboard
+          path: |
+            output/ci-bedtime.mp4
+            output/ci-from-prompt.mp4
+            output/ci-from-prompt.storyboard.json
+          if-no-files-found: error
+          retention-days: 7
