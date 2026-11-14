@@ -23,7 +23,7 @@ with tempfile.TemporaryDirectory(dir=dest.parent) as staging:
     bvh = clip / "motion.bvh"
     subprocess.run([runtime / "runtime/build/examples/01_hello", runtime / "model.gguf",
                     args.prompt, bvh], check=True)
-    subprocess.run(["blender", "-b", "--factory-startup", "-t", "1",
+    subprocess.run([os.environ.get("BVH_BLENDER", "blender"), "-b", "--factory-startup", "-t", "1",
                     "--python-exit-code", "1", "-P", here / "export_pose.py",
                     "--", bvh, clip / "pose.json"], check=True)
     (clip / "prompt.txt").write_text(args.prompt)
