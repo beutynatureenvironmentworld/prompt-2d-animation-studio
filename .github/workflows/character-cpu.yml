@@ -10,6 +10,10 @@ on:
         description: Scene for prop physics and dialogue
         type: choice
         options: [rooftop, garden, workshop]
+      art:
+        description: Background renderer
+        type: choice
+        options: [blender, experimental-diffusion]
       background:
         description: Background art prompt
         required: true
@@ -40,7 +44,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: blender -b -t 2 --python-exit-code 1 -P motion-worker/cycles_plate.py -- output/cycles.png
       - name: Install stable-diffusion.cpp CPU and generate background
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && inputs.art == 'experimental-diffusion' }}
         run: |
           git clone --depth 1 https://github.com/leejet/stable-diffusion.cpp.git worker-bin/sd
           git -C worker-bin/sd submodule update --init --recursive --depth 1
