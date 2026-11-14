@@ -1,0 +1,51 @@
+name: Character motion and CPU background
+on:
+  workflow_dispatch:
+    inputs:
+      motion:
+        description: Describe a four-second character movement
+        required: true
+        default: A person ducks then jumps back in surprise
+      background:
+        description: Background art prompt
+        required: true
+        default: A moonlit cartoon rooftop with a warm glowing window, no people
+  push:
+    paths: ['.github/workflows/character-cpu.yml']
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      MOTION: ${{ inputs.motion || 'A person ducks then jumps back in surprise' }}
+      BACKGROUND: ${{ inputs.background || 'Moonlit cartoon rooftop with a warm glowing window, no people' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare official Blender and CPU motion runtime
+        run: |
+          mkdir -p output worker-bin
+          curl -fsSL --retry 3 https://download.blender.org/release/Blender4.2/blender-4.2.0-linux-x64.tar.xz | tar xJ -C worker-bin
+          echo "$PWD/worker-bin/blender-4.2.0-linux-x64" >> "$GITHUB_PATH"
+          bash motion-worker/install.sh
+      - name: Export reusable body motion
+        run: python3 motion-worker/prepare.py "$MOTION" output/character
+      - name: Render CPU lighting plate
+        if: ${{ !cancelled() }}
+        run: blender -b -t 2 --python-exit-code 1 -P motion-worker/cycles_plate.py -- output/cycles.png
+      - name: Install stable-diffusion.cpp CPU and generate background
+        if: ${{ !cancelled() }}
+        run: |
+          git clone --depth 1 https://github.com/leejet/stable-diffusion.cpp.git worker-bin/sd
+          git -C worker-bin/sd submodule update --init --recursive --depth 1
+          cmake -S worker-bin/sd -B worker-bin/build -DCMAKE_BUILD_TYPE=Release -DSD_BUILD_EXAMPLES=ON
+          cmake --build worker-bin/build --config Release -j 2 --target sd-cli
+          curl -fL --retry 3 https://huggingface.co/gpustack/stable-diffusion-v2-1-turbo-GGUF/resolve/1316499/stable-diffusion-v2-1-turbo-Q4_0.gguf -o worker-bin/turbo.gguf
+          export SD_BIN="$PWD/worker-bin/build/bin/sd-cli" SD_MODEL="$PWD/worker-bin/turbo.gguf"
+          bash motion-worker/cpu-background.sh "$BACKGROUND" output/diffusion.png
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: cpu-motion-and-plates
+          path: output/
