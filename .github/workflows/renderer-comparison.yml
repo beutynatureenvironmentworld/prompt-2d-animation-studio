@@ -28,6 +28,9 @@ jobs:
         if: always()
         with:
           name: video-render-${{ matrix.engine }}
-          path: render-compare/results/${{ matrix.engine }}/
+          path: |
+            render-compare/results/${{ matrix.engine }}/report.txt
+            render-compare/results/${{ matrix.engine }}/render.mp4
+            render-compare/results/${{ matrix.engine }}/video_metadata.txt
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 2
