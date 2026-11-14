@@ -24,7 +24,7 @@ elif [ "$ENGINE" = "revideo" ]; then
   cat > src/scenes/example.tsx <<'TSX'
 import {makeScene2D, Circle} from '@revideo/2d';
 import {waitFor} from '@revideo/core';
-export default makeScene2D(function* (view) {
+export default makeScene2D('example', function* (view) {
   view.add(new Circle({width:80, height:80, fill:'#fbcc53'}));
   yield* waitFor(0.65);
 });
@@ -33,8 +33,13 @@ TSX
 import {makeProject} from '@revideo/core';
 import scene from './scenes/example?scene';
 export default makeProject({
+  name:'tiny-render',
   scenes:[scene],
-  settings:{shared:{size:{x:160,y:90}},rendering:{fps:12}},
+  settings:{
+    shared:{background:'#152743',range:[0,0.65],size:{x:160,y:90}},
+    preview:{fps:12,resolutionScale:1},
+    rendering:{fps:12,resolutionScale:1,colorSpace:'srgb',exporter:{name:'@revideo/core/wasm'}}
+  },
 });
 TS
   cat > vite.config.ts <<'TS'
