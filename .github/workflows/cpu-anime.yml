@@ -1,0 +1,81 @@
+name: CPU anime tools
+on:
+  push:
+    paths:
+      - 'cpu-anime/**'
+      - '.github/workflows/cpu-anime.yml'
+  pull_request:
+    paths:
+      - 'cpu-anime/**'
+      - '.github/workflows/cpu-anime.yml'
+  workflow_dispatch:
+    inputs:
+      blender_smoke:
+        description: 'Also install and run Blender/Synfig CPU smoke test'
+        type: boolean
+        default: false
+      build_sd_cpp:
+        description: 'Build CPU-only stable-diffusion.cpp (no model downloaded)'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: cpu-anime-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  deterministic-demo:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install -r cpu-anime/requirements.txt
+      - name: Test and render silent MP4
+        run: |
+          python -m unittest discover -s cpu-anime -p 'test_*.py' -v
+          mkdir -p cpu-anime/out
+          python cpu-anime/render_demo.py --prompt 'A girl walks, waves and blinks beside a lantern' --duration 6 --fps 15 --output cpu-anime/out/anime-demo.mp4
+          ffmpeg -v error -i cpu-anime/out/anime-demo.mp4 -f null -
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 cpu-anime/out/anime-demo.mp4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cpu-anime-demo
+          path: cpu-anime/out/anime-demo.mp4
+          retention-days: 7
+          if-no-files-found: error
+  blender-synfig-check:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.blender_smoke }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends blender synfig ffmpeg
+          synfig -h || true
+      - run: |
+          blender -b --factory-startup --python-exit-code 1 --python cpu-anime/blender_cpu_test.py
+          ffmpeg -y -v error -framerate 8 -start_number 1 -i cpu-anime/out/blender-smoke/frame_%04d.png -an -c:v libx264 -pix_fmt yuv420p cpu-anime/out/blender-smoke.mp4
+          ffmpeg -v error -i cpu-anime/out/blender-smoke.mp4 -f null -
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blender-cpu-smoke
+          path: cpu-anime/out/blender-smoke.mp4
+          retention-days: 7
+          if-no-files-found: error
+  stable-diffusion-cpp:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_sd_cpp }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y git cmake build-essential
+          bash cpu-anime/build_sd_cpp.sh
