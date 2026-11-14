@@ -1,0 +1,13 @@
+{
+  "name": "cpu-anime-js-tool-check",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Dependency smoke-check only; not a finished animation renderer",
+  "dependencies": {
+    "@motion-canvas/core": "3.17.2",
+    "@motion-canvas/2d": "3.17.2",
+    "three": "0.187.0",
+    "remotion": "4.0.543"
+  }
+}

@@ -1,0 +1,93 @@
+name: CPU anime creative stack
+on:
+  push:
+    paths:
+      - 'cpu-anime/**'
+      - '.github/workflows/cpu-anime-creative-stack.yml'
+  pull_request:
+    paths:
+      - 'cpu-anime/**'
+      - '.github/workflows/cpu-anime-creative-stack.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cpu-anime-stack-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  blender-synfig-art:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install CPU animation toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends blender synfig synfigstudio inkscape pencil2d ffmpeg
+          blender --version | head -n 2
+          synfig --version || true
+          inkscape --version
+          command -v pencil2d
+          ffmpeg -version | head -n 1
+      - name: Blender CPU scene and MP4
+        run: |
+          blender -b --factory-startup --python-exit-code 1 --python cpu-anime/blender_cpu_test.py
+          ffmpeg -hide_banner -loglevel error -y -framerate 8 -start_number 1 -i cpu-anime/out/blender-smoke/frame_%04d.png -an -c:v libx264 -pix_fmt yuv420p cpu-anime/out/blender-smoke.mp4
+          ffmpeg -v error -i cpu-anime/out/blender-smoke.mp4 -f null -
+      - name: Synfig vector animation smoke test
+        run: |
+          mkdir -p cpu-anime/out/synfig
+          test -f /usr/share/synfig/plugins/add-skeleton-simple/stickman.sif
+          synfig /usr/share/synfig/plugins/add-skeleton-simple/stickman.sif -o cpu-anime/out/synfig/frame.png -t png -w 320 -h 180
+          test -n "$(find cpu-anime/out/synfig -name '*.png' -print -quit)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blender-synfig-cpu-tests
+          path: |
+            cpu-anime/out/blender-smoke.mp4
+            cpu-anime/out/synfig/*.png
+          retention-days: 7
+          if-no-files-found: error
+  stable-diffusion-cpp-cpu:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install C++ build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends cmake git build-essential pkg-config
+      - name: Build pinned stable-diffusion.cpp (no model weights)
+        run: |
+          bash cpu-anime/build_sd_cpp.sh
+          find cpu-anime/vendor/stable-diffusion.cpp/build -type f -name 'sd-cli' -print
+      - name: Check installed CPU CLI
+        run: |
+          CLI="$(find cpu-anime/vendor/stable-diffusion.cpp/build -type f -name 'sd-cli' -print -quit)"
+          test -n "$CLI"
+          "$CLI" --help > /tmp/sd-help.txt 2>&1 || test -s /tmp/sd-help.txt
+          head -n 5 /tmp/sd-help.txt
+  node-motion-canvas-remotion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install JS motion libraries
+        working-directory: cpu-anime/js-check
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Verify availability
+        working-directory: cpu-anime/js-check
+        run: node verify.mjs
+  other-video-tool-sources:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect MoneyPrinterTurbo source without running APIs
+        run: |
+          git clone --depth 1 https://github.com/harry0703/MoneyPrinterTurbo.git /tmp/MoneyPrinterTurbo
+          test -f /tmp/MoneyPrinterTurbo/README-en.md
+          echo 'Source checkout OK; application dependencies and external provider services are not installed or invoked.'
