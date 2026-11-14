@@ -41,7 +41,7 @@ A workflow under `.github/workflows/snap2d.yml` automatically checks the code, r
 
 ### Rights
 
-The original project code/drawings are authored for this repository. PyCairo/Python Cairo and FFmpeg carry their own licenses depending on distribution and linked codecs. Do not import copyrighted video frames, audio, characters, unlicensed sound or voices without permission. The supplied reference was inspected in this conversation for timing/animation techniques, not embedded or redistributed.
+New original Snap2D code/drawings are MIT-licensed (see snap2d/LICENSE). PyCairo/Python Cairo and FFmpeg carry their own licenses depending on distribution and linked codecs. Do not import copyrighted video frames, audio, characters, unlicensed sound or voices without permission. The supplied reference was inspected in this conversation for timing/animation techniques, not embedded or redistributed.
 
 ### Limitations / next work
 
