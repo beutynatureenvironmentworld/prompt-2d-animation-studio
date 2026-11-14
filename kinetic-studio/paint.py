@@ -92,7 +92,7 @@ def object_at(x,y,theta,p):
         for i in range(12):oval(S(i*PI/6)*12,C(i*PI/6)*12,1,1,ink)
         path([(-6,-3),(0,0),(2,-8)],ink,2)
     g.restore()
-def frame(t,i,p,sim,amp,character=None):
+def frame(t,i,p,sim,amp,character=None,plate=None):
     global g
     surf=cairo.ImageSurface(cairo.FORMAT_RGB24,WIDTH,WIDTH*16//9);g=cairo.Context(surf);g.scale(WIDTH/360,WIDTH/360)
     g.set_line_cap(cairo.LINE_CAP_ROUND);g.set_line_join(cairo.LINE_JOIN_ROUND)
@@ -103,7 +103,18 @@ def frame(t,i,p,sim,amp,character=None):
     else:z=1.01+.065*smooth((t-2)/3);cx,cy=182+6*S(t*.65),326
     shake=sum(math.exp(-(i-hit)/3)*2.5 for hit in sim['hits'] if 0<=i-hit<14)
     g.translate(180,320);g.scale(z,z);g.translate(-cx+shake*S(i*3),-cy)
-    sky(t,p,4*S(t*.7));oval(186,473,30,3,'#797477')
+    if plate is None:
+        sky(t,p,4*S(t*.7))
+    else:
+        g.save()
+        # Paint past the camera bounds so pans never reveal empty pixels.
+        scale=max(540/plate.get_width(),800/plate.get_height())
+        g.translate(180-plate.get_width()*scale/2,320-plate.get_height()*scale/2)
+        g.scale(scale,scale)
+        g.set_source_surface(plate)
+        g.paint()
+        g.restore()
+    oval(186,473,30,3,'#797477')
     if i>=48:
         for n in (6,4,2):
             px,py,_=sim['rows'][max(0,i-n)]
