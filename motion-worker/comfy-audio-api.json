@@ -1,0 +1,8 @@
+{
+  "1":{"class_type":"LoadAudio","inputs":{"audio":"voice.wav"}},
+  "2":{"class_type":"LoadAudio","inputs":{"audio":"music.wav"}},
+  "3":{"class_type":"LoadAudio","inputs":{"audio":"effects.wav"}},
+  "4":{"class_type":"AudioMerge","inputs":{"audio1":["2",0],"audio2":["3",0],"merge_method":"mean"}},
+  "5":{"class_type":"AudioMerge","inputs":{"audio1":["1",0],"audio2":["4",0],"merge_method":"mean"}},
+  "6":{"class_type":"SaveAudio","inputs":{"audio":["5",0],"filename_prefix":"audio/vidbest-mix"}}
+}
