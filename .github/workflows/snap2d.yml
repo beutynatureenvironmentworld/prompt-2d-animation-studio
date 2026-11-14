@@ -1,0 +1,50 @@
+name: Snap2D fast-action CPU cartoon
+on:
+  push:
+    branches: ['feat/**', 'feature/**']
+    paths:
+      - 'snap2d/**'
+      - '.github/workflows/snap2d.yml'
+  pull_request:
+    paths:
+      - 'snap2d/**'
+      - '.github/workflows/snap2d.yml'
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Optional supported prompt; use shots: sneak, glare, chase, shock'
+        type: string
+        required: false
+        default: 'Funny cookie chase with cartoon reactions'
+permissions:
+  contents: read
+jobs:
+  snap2d:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native Cairo and FFmpeg, no AI weights
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends python3-cairo ffmpeg
+          /usr/bin/python3 -c 'import cairo; print(cairo.version)'
+      - name: Validate and exercise fast-pose renderer
+        run: /usr/bin/python3 -m unittest discover -s snap2d/tests -v
+      - name: Render CPU-only silent cartoon
+        env:
+          INPUT_PROMPT: ${{ inputs.prompt || 'Funny cookie chase with cartoon reactions' }}
+        run: |
+          mkdir -p snap2d/output
+          /usr/bin/python3 snap2d/rapid_cartoon.py --prompt "$INPUT_PROMPT" --width 360 --fps 24 --save-storyboard snap2d/output/storyboard.json --output snap2d/output/snap2d-fast-cartoon.mp4
+          test -s snap2d/output/snap2d-fast-cartoon.mp4
+          ffprobe -v error -show_entries stream=codec_name,codec_type,width,height -of json snap2d/output/snap2d-fast-cartoon.mp4
+      - name: Upload editable storyboard and silent MP4
+        uses: actions/upload-artifact@v4
+        with:
+          name: snap2d-silent-portrait-video
+          path: |
+            snap2d/output/storyboard.json
+            snap2d/output/snap2d-fast-cartoon.mp4
+          retention-days: 7
+          if-no-files-found: error

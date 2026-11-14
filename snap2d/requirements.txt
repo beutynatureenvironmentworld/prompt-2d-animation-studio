@@ -1,0 +1,3 @@
+# The reference renderer uses Python Cairo bindings. On Ubuntu, prefer
+# apt-get install python3-cairo to avoid compiling a native wheel.
+pycairo==1.29.0
