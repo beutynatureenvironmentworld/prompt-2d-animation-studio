@@ -1,0 +1,51 @@
+name: Mix voice, music and effects with ComfyUI
+on:
+  workflow_dispatch:
+    inputs:
+      voice:
+        description: Voice WAV file path in this repository
+        required: true
+      music:
+        description: Music WAV file path in this repository
+        required: true
+      effects:
+        description: Effects WAV file path in this repository
+        required: true
+permissions:
+  contents: read
+jobs:
+  mix:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Start CPU audio worker and render the mix
+        env:
+          VOICE: ${{ inputs.voice }}
+          MUSIC: ${{ inputs.music }}
+          EFFECTS: ${{ inputs.effects }}
+        run: |
+          for track in "$VOICE" "$MUSIC" "$EFFECTS"; do
+            case "$(realpath -e -- "$track")" in "$GITHUB_WORKSPACE"/*.wav) ;; *) exit 1 ;; esac
+          done
+          git clone --depth 1 https://github.com/Comfy-Org/ComfyUI.git "$RUNNER_TEMP/comfy"
+          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+          pip install -r "$RUNNER_TEMP/comfy/requirements.txt"
+          python "$RUNNER_TEMP/comfy/main.py" --cpu --listen 127.0.0.1 > "$RUNNER_TEMP/comfy.log" 2>&1 &
+          server=$!
+          trap 'kill "$server" || true' EXIT
+          ready=false
+          for n in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:8188/system_stats >/dev/null 2>&1; then ready=true; break; fi
+            if ! kill -0 "$server"; then tail -40 "$RUNNER_TEMP/comfy.log"; exit 1; fi
+            sleep 2
+          done
+          test "$ready" = true
+          python motion-worker/run_audio_graph.py "$RUNNER_TEMP/comfy" output/mix.flac "$VOICE" "$MUSIC" "$EFFECTS"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: episode-audio
+          path: output/mix.flac
