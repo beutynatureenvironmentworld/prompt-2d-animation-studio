@@ -1,0 +1,33 @@
+name: Independent advanced animation tool tests
+on:
+  push:
+    branches: [feature/independent-animation-toolchain-tests]
+    paths: ['tool-audit/**', '.github/workflows/tool-audit-advanced.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tool:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        tool: ['opencode', 'remotion', 'revideo', 'motion-canvas', 'stykanimate', 'stick', 'krita', 'pencil2d', 'opentoonz', 'moneyprinterturbo']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Independently install/test software
+        env:
+          TOOL: ${{ matrix.tool }}
+        run: bash tool-audit/run-advanced.sh "$TOOL"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: audit-advanced-${{ matrix.tool }}
+          path: tool-audit/results/${{ matrix.tool }}/report.txt
+          if-no-files-found: warn
+          retention-days: 7

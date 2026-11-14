@@ -1,0 +1,36 @@
+name: Compare headless MP4 renderers independently
+on:
+  push:
+    branches: [feature/independent-animation-toolchain-tests]
+    paths: ['render-compare/**', '.github/workflows/renderer-comparison.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        engine: [remotion, revideo]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Actual CPU H264 MP4 render smoke
+        env:
+          ENGINE: ${{ matrix.engine }}
+        run: bash render-compare/run.sh "$ENGINE"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: video-render-${{ matrix.engine }}
+          path: |
+            render-compare/results/${{ matrix.engine }}/report.txt
+            render-compare/results/${{ matrix.engine }}/render.mp4
+            render-compare/results/${{ matrix.engine }}/video_metadata.txt
+          if-no-files-found: warn
+          retention-days: 2
