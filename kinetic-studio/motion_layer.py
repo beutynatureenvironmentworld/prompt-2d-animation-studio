@@ -13,7 +13,7 @@ class MotionLayer:
         self.floor = min(first[key][2] for key in ("r_foot", "l_foot", "r_ankle", "l_ankle"))
         self.scale = 112 / max(1, first["neck"][2] - self.floor)
 
-    def draw(self, t, prop, plan, cue, amp):
+    def draw(self, t, prop, plan, cue, amp, mouth=None):
         index = max(0, min(len(self.frames)-1, round((t-self.start)*self.rate)))
         joints = self.frames[index]
         def point(name):
@@ -43,5 +43,5 @@ class MotionLayer:
         for dx in (-5,6):
             paint.oval(hx+dx,hy,3.4,3.7*blink,"#fff3df")
             paint.oval(hx+dx+math.copysign(1,prop[0]-hx),hy,1.6,2.2*blink,paint.ink)
-        paint.oval(hx+1,hy+9,3+amp,1+3*amp,"#844c57")
+        paint.oval(hx+1,hy+9,*(mouth or (3+amp,1+3*amp)),"#844c57")
         arm(sides[1])
