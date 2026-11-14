@@ -1,0 +1,632 @@
+{
+  "prompt": "A moth brings a letter through a moonlit window, lands on a nightcap, tickles the sleeping roommate awake, then delivers the bill to the reading lamp.",
+  "shots": [
+    {
+      "seconds": 8,
+      "note": "A breeze lifts a visitor through the open upper pane.",
+      "flight": [
+        [
+          0.0,
+          870,
+          170,
+          0.23,
+          12,
+          0.25
+        ],
+        [
+          0.3333333333333333,
+          840,
+          140,
+          0.55,
+          -30,
+          0.25
+        ],
+        [
+          0.6666666666666666,
+          768,
+          228,
+          0.84,
+          26,
+          0.32
+        ],
+        [
+          1.0,
+          650,
+          183,
+          0.9,
+          -22,
+          0.5
+        ]
+      ],
+      "acting": [
+        [
+          0.0,
+          0,
+          0,
+          0.2
+        ],
+        [
+          1.0,
+          0,
+          0.2,
+          1
+        ]
+      ],
+      "camera": [
+        [
+          0.0,
+          480,
+          270,
+          1
+        ],
+        [
+          1.0,
+          686,
+          261,
+          1.28
+        ]
+      ],
+      "lines": [
+        [
+          3,
+          "left",
+          "Did the moon just blink?"
+        ]
+      ],
+      "gust": 0.7
+    },
+    {
+      "seconds": 9,
+      "note": "The moth circles the reading light, carrying a tiny envelope.",
+      "flight": [
+        [
+          0.0,
+          650,
+          183,
+          0.9,
+          -22,
+          0.5
+        ],
+        [
+          0.25,
+          545,
+          255,
+          1.4,
+          -45,
+          0.85
+        ],
+        [
+          0.5,
+          443,
+          308,
+          0.85,
+          25,
+          1
+        ],
+        [
+          0.75,
+          437,
+          245,
+          1.15,
+          -28,
+          0.9
+        ],
+        [
+          1.0,
+          480,
+          267,
+          1.15,
+          8,
+          1
+        ]
+      ],
+      "acting": [
+        [
+          0.0,
+          0,
+          0.2,
+          1
+        ],
+        [
+          1.0,
+          0,
+          0.7,
+          0.8
+        ]
+      ],
+      "camera": [
+        [
+          0.0,
+          686,
+          261,
+          1.28
+        ],
+        [
+          1.0,
+          448,
+          276,
+          1.25
+        ]
+      ],
+      "lines": [
+        [
+          2,
+          "left",
+          "A night delivery? For us?"
+        ]
+      ],
+      "parcel": true
+    },
+    {
+      "seconds": 8,
+      "note": "Trying to read the address only attracts the moth to the nightcap.",
+      "flight": [
+        [
+          0.0,
+          480,
+          267,
+          1.15,
+          8,
+          1
+        ],
+        [
+          0.3333333333333333,
+          394,
+          222,
+          1.15,
+          -30,
+          0.8
+        ],
+        [
+          0.6666666666666666,
+          340,
+          252,
+          0.8,
+          30,
+          0.45
+        ],
+        [
+          1.0,
+          286,
+          208,
+          0.8,
+          -12,
+          0.3
+        ]
+      ],
+      "acting": [
+        [
+          0.0,
+          0,
+          0.7,
+          0.8
+        ],
+        [
+          1.0,
+          0,
+          1,
+          -1
+        ]
+      ],
+      "camera": [
+        [
+          0.0,
+          448,
+          276,
+          1.25
+        ],
+        [
+          1.0,
+          290,
+          260,
+          1.34
+        ]
+      ],
+      "lines": [
+        [
+          2,
+          "left",
+          "That is a hat. The mailbox is outside."
+        ]
+      ],
+      "parcel": true
+    },
+    {
+      "seconds": 10,
+      "note": "The moth pauses, then dives from the cap toward the sleeper.",
+      "flight": [
+        [
+          0.0,
+          286,
+          208,
+          0.8,
+          -12,
+          0.3
+        ],
+        [
+          0.25,
+          282,
+          209,
+          0.85,
+          0,
+          0.3
+        ],
+        [
+          0.5,
+          402,
+          154,
+          0.75,
+          -18,
+          0.26
+        ],
+        [
+          0.75,
+          564,
+          192,
+          1.1,
+          32,
+          0.22
+        ],
+        [
+          1.0,
+          696,
+          320,
+          0.65,
+          10,
+          0.18
+        ]
+      ],
+      "acting": [
+        [
+          0.0,
+          0,
+          1,
+          -1
+        ],
+        [
+          1.0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "camera": [
+        [
+          0.0,
+          290,
+          260,
+          1.34
+        ],
+        [
+          1.0,
+          686,
+          261,
+          1.28
+        ]
+      ],
+      "lines": [
+        [
+          2,
+          "left",
+          "Whatever you do, do not wake him up."
+        ]
+      ],
+      "parcel": true
+    },
+    {
+      "seconds": 9,
+      "note": "A tickle wakes the sleeper. Both follow the delivery.",
+      "flight": [
+        [
+          0.0,
+          696,
+          320,
+          0.65,
+          10,
+          0.18
+        ],
+        [
+          0.3333333333333333,
+          707,
+          308,
+          0.75,
+          28,
+          0.22
+        ],
+        [
+          0.6666666666666666,
+          702,
+          264,
+          0.82,
+          -19,
+          0.28
+        ],
+        [
+          1.0,
+          610,
+          247,
+          1.1,
+          -16,
+          0.55
+        ]
+      ],
+      "acting": [
+        [
+          0.0,
+          0,
+          0,
+          1
+        ],
+        [
+          0.5,
+          1,
+          0.6,
+          -0.8
+        ],
+        [
+          1.0,
+          1,
+          0.15,
+          0.6
+        ]
+      ],
+      "camera": [
+        [
+          0.0,
+          686,
+          261,
+          1.28
+        ],
+        [
+          1.0,
+          627,
+          290,
+          1.4
+        ]
+      ],
+      "lines": [
+        [
+          2,
+          "right",
+          "Is that my midnight snack?"
+        ],
+        [
+          6,
+          "left",
+          "It brought a letter."
+        ]
+      ],
+      "parcel": true
+    },
+    {
+      "seconds": 8,
+      "note": "The moth returns to the warm lamp and hovers.",
+      "flight": [
+        [
+          0.0,
+          610,
+          247,
+          1.1,
+          -16,
+          0.55
+        ],
+        [
+          0.5,
+          542,
+          221,
+          1.25,
+          -18,
+          0.8
+        ],
+        [
+          1.0,
+          480,
+          267,
+          1.15,
+          8,
+          1
+        ]
+      ],
+      "acting": [
+        [
+          0.0,
+          1,
+          0.15,
+          0.6
+        ],
+        [
+          1.0,
+          1,
+          0.7,
+          1
+        ]
+      ],
+      "camera": [
+        [
+          0.0,
+          627,
+          290,
+          1.4
+        ],
+        [
+          1.0,
+          448,
+          276,
+          1.25
+        ]
+      ],
+      "lines": [
+        [
+          1,
+          "right",
+          "Who sends mail at this hour?"
+        ],
+        [
+          5,
+          "left",
+          "Look at the address."
+        ]
+      ],
+      "parcel": true
+    },
+    {
+      "seconds": 8,
+      "note": "A close inspection reveals the intended recipient.",
+      "flight": [
+        [
+          0.0,
+          480,
+          267,
+          1.15,
+          8,
+          1
+        ],
+        [
+          0.5,
+          480,
+          262,
+          1.7,
+          4,
+          1
+        ],
+        [
+          1.0,
+          479,
+          266,
+          1.6,
+          -5,
+          1
+        ]
+      ],
+      "acting": [
+        [
+          0.0,
+          1,
+          0.7,
+          1
+        ],
+        [
+          1.0,
+          1,
+          0.2,
+          1
+        ]
+      ],
+      "camera": [
+        [
+          0.0,
+          448,
+          276,
+          1.25
+        ],
+        [
+          1.0,
+          480,
+          289,
+          1.72
+        ]
+      ],
+      "lines": [
+        [
+          1,
+          "left",
+          "It says, to the brightest one in the room."
+        ],
+        [
+          5.6,
+          "right",
+          "Oh. That is me."
+        ]
+      ],
+      "parcel": true
+    },
+    {
+      "seconds": 9,
+      "note": "The lamp gets the delivery and the moth flies back out.",
+      "flight": [
+        [
+          0.0,
+          479,
+          266,
+          1.6,
+          -5,
+          1
+        ],
+        [
+          0.25,
+          490,
+          268,
+          1.2,
+          5,
+          1
+        ],
+        [
+          0.5,
+          602,
+          183,
+          1,
+          -18,
+          0.9
+        ],
+        [
+          0.75,
+          822,
+          171,
+          0.46,
+          -10,
+          0.2
+        ],
+        [
+          1.0,
+          953,
+          125,
+          0.14,
+          12,
+          0.8
+        ]
+      ],
+      "acting": [
+        [
+          0.0,
+          1,
+          0.2,
+          1
+        ],
+        [
+          1.0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "camera": [
+        [
+          0.0,
+          480,
+          289,
+          1.72
+        ],
+        [
+          1.0,
+          480,
+          270,
+          1
+        ]
+      ],
+      "lines": [
+        [
+          2,
+          "left",
+          "It is addressed to the lamp."
+        ],
+        [
+          5.6,
+          "right",
+          "Fine. The lamp can pay the bill."
+        ]
+      ],
+      "delivery": true,
+      "gust": 0.5
+    }
+  ]
+}
