@@ -17,8 +17,9 @@ args = parser.parse_args()
 graph = json.loads((here/"comfy-audio-api.json").read_text())
 ticket = uuid.uuid4().hex
 root = args.comfy.resolve()
-job = root / "input" / ticket
-job.mkdir(parents=True)
+job = root / "input"
+job.mkdir(parents=True,exist_ok=True)
+staged=[]
 def call(route, body=None):
     data = None if body is None else json.dumps(body).encode()
     req = Request("http://127.0.0.1:8188/" + route, data,
@@ -27,9 +28,10 @@ def call(route, body=None):
         return json.load(response)
 try:
     for node,source in enumerate((args.voice,args.music,args.effects),1):
-        name = str(node) + source.suffix
+        name = f"{ticket}-{node}{source.suffix}"
+        staged.append(job/name)
         shutil.copyfile(source,job/name)
-        graph[str(node)]["inputs"]["audio"] = ticket + "/" + name
+        graph[str(node)]["inputs"]["audio"] = name
     result=call("prompt",{"prompt":graph,"client_id":ticket})
     pid=result["prompt_id"]
     for _ in range(300):
@@ -47,4 +49,5 @@ try:
     else:
         raise TimeoutError("Local ComfyUI audio job exceeded ten minutes")
 finally:
-    shutil.rmtree(job)
+    for item in staged:
+        item.unlink(missing_ok=True)
