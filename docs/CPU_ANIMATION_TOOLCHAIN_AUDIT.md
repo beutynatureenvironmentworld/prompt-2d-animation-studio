@@ -56,12 +56,12 @@ GitHub Actions run: https://github.com/beutynatureenvironmentworld/prompt-2d-ani
 
 ## Real headless video renderer comparison
 
-Actions run: https://github.com/beutynatureenvironmentworld/prompt-2d-animation-studio/actions/runs/43632640009 (the latest comparison using Revideo's official exporter setting).
+Actions runs: https://github.com/beutynatureenvironmentworld/prompt-2d-animation-studio/actions/runs/43632640009 (exporter setting) and latest https://github.com/beutynatureenvironmentworld/prompt-2d-animation-studio/actions/runs/43633140886 (named project and scene with official settings).
 
 | Engine | Actual silent H.264 MP4 result |
 |---|---|
 | **Remotion** | **PASS**: 160×90, 12fps, 12-frame CPU-rendered H.264 MP4 through Chromium |
-| **Revideo** | **FAIL**: installed and Vite-build passed; `renderVideo()` aborted with `Cannot read properties of undefined (reading 'name')`, including after setting `@revideo/core/wasm` exporter per its template. Not certified as a production MP4 renderer by this project. |
+| **Revideo** | **FAIL**: npm install and Vite build succeeded; initial `renderVideo()` aborted with `Cannot read properties of undefined (reading 'name')`; after adding the official `@revideo/core/wasm` exporter and named scene/project, the latest headless run failed with `The thread is not available in the current context.` No MP4 output was verified; not certified as a production renderer here. |
 | Python + PyCairo + FFmpeg (Snap2D) | **PASS**: authored silent portrait fast-action video, verified independently in Snap2D workflow |
 | Motion Canvas | TypeScript editor/browser build passed; no standalone MP4 render in these tests. |
 
@@ -109,7 +109,7 @@ Actual test directory: `/home/ubuntu/snap2d-tools-audit`, separate from existing
 
 - Core matrix: https://github.com/beutynatureenvironmentworld/prompt-2d-animation-studio/actions/runs/43632009751
 - Advanced matrix: https://github.com/beutynatureenvironmentworld/prompt-2d-animation-studio/actions/runs/43632009761
-- Real headless renderer comparison: https://github.com/beutynatureenvironmentworld/prompt-2d-animation-studio/actions/runs/43632640009
+- Real headless renderer comparison (latest): https://github.com/beutynatureenvironmentworld/prompt-2d-animation-studio/actions/runs/43633140886
 - Snap2D fast-action animation: https://github.com/beutynatureenvironmentworld/prompt-2d-animation-studio/pull/3
 - Tool audit proposal: https://github.com/beutynatureenvironmentworld/prompt-2d-animation-studio/pull/4
 - GitHub standard public runner usage and limits: https://docs.github.com/en/actions/concepts/billing-and-usage
