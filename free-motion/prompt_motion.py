@@ -39,7 +39,7 @@ def generate(prompt):
     turns=''.join('<|im_start|>user\n'+q+'<|im_end|>\n<|im_start|>assistant\n'+a+'<|im_end|>\n' for q,a in examples)
     chat='<|im_start|>system\n'+INSTRUCTION+'<|im_end|>\n'+turns+'<|im_start|>user\n'+prompt+'<|im_end|>\n<|im_start|>assistant\n'
     run=subprocess.run([str(cli),'-m',str(model),'-p',chat,'--grammar',GRAMMAR,
-        '-n','220','-c','1024','-t','2','--temp','0.65','--seed','19',
+        '-b','32','-ub','16','-n','220','-c','1024','-t','2','--temp','0.65','--seed','19',
         '--no-display-prompt','-no-cnv','--simple-io','--no-warmup'],
         capture_output=True,text=True,timeout=240)
     if run.returncode: raise RuntimeError(run.stderr[-1500:])
