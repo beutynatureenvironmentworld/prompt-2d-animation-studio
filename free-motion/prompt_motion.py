@@ -6,6 +6,9 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import socket
+import time
+import urllib.request
 
 
 HERE = Path(__file__).resolve().parent
@@ -30,7 +33,7 @@ versus right and exaggerate silhouettes. Output only four CSV lines."""
 
 def generate(prompt):
     runtime=Path(os.environ.get('MOTION_RUNTIME',HERE/'runtime'))
-    cli=next(runtime.rglob('llama-cli'))
+    server=next(runtime.rglob('llama-server'))
     model=runtime/'motion.gguf'
     examples = [
         ("Curl forward to examine a tiny flower, then straighten.", "0,-30,0,0,0,0,0,0\n-30,-30,0,0,30,-30,0,0\n-60,-30,0,0,60,-30,0,0\n0,0,0,0,0,0,0,0"),
@@ -38,16 +41,31 @@ def generate(prompt):
         ("Shield your eyes with your left elbow, then relax.", "0,0,-30,-30,0,0,0,0\n30,-30,-90,-90,0,0,0,0\n30,-30,-120,-90,0,0,0,0\n0,0,-30,0,0,0,0,0")]
     turns=''.join('<|im_start|>user\n'+q+'<|im_end|>\n<|im_start|>assistant\n'+a+'<|im_end|>\n' for q,a in examples)
     chat='<|im_start|>system\n'+INSTRUCTION+'<|im_end|>\n'+turns+'<|im_start|>user\n'+prompt+'<|im_end|>\n<|im_start|>assistant\n'
-    run=subprocess.run([str(cli),'-m',str(model),'-p',chat,'--grammar',GRAMMAR,
-        '-b','32','-ub','16','-n','220','-c','1024','-t','2','--temp','0.65','--seed','19',
-        '--no-display-prompt','-no-cnv','--simple-io','--no-warmup'],
-        capture_output=True,text=True,timeout=240)
-    if run.returncode: raise RuntimeError(run.stderr[-1500:])
+    with socket.socket() as sock:
+        sock.bind(('127.0.0.1',0))
+        port=sock.getsockname()[1]
+    base=f'http://127.0.0.1:{port}'
+    proc=subprocess.Popen([str(server),'-m',str(model),'--host','127.0.0.1','--port',str(port),
+                           '-b','32','-ub','16','-c','1536','-t','2','-np','1','--no-warmup'],
+                          stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    try:
+        for _ in range(120):
+            if proc.poll() is not None: raise RuntimeError('Local model server exited during startup')
+            try:
+                with urllib.request.urlopen(base+'/health',timeout=2): break
+            except OSError: time.sleep(.5)
+        payload=dict(prompt=chat,grammar=GRAMMAR,n_predict=220,temperature=.65,seed=19)
+        request=urllib.request.Request(base+'/completion',data=json.dumps(payload).encode(),headers={'Content-Type':'application/json'})
+        with urllib.request.urlopen(request,timeout=240) as response: output=json.load(response)['content']
+    finally:
+        proc.terminate()
+        try: proc.wait(timeout=8)
+        except subprocess.TimeoutExpired: proc.kill();proc.wait()
     import re
-    rows=re.findall(r'(?m)^\s*(-?\d+(?:,-?\d+){7})\s*$',run.stdout.replace('[end of text]',''))
+    rows=re.findall(r'(?m)^\s*(-?\d+(?:,-?\d+){7})\s*$',output)
     poses=[list(map(int,row.split(','))) for row in rows]
     if len(poses)!=4 or len(set(map(tuple,poses)))<2:
-        raise ValueError('Model returned incomplete or static poses: '+run.stdout[-400:])
+        raise ValueError('Model returned incomplete or static poses: '+output[-400:])
     return poses
 
 def bake(folder):
