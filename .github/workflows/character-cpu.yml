@@ -6,12 +6,14 @@ on:
         description: Describe a four-second character movement
         required: true
         default: A person ducks then jumps back in surprise
+      setting:
+        description: Scene for prop physics and dialogue
+        type: choice
+        options: [rooftop, garden, workshop]
       background:
         description: Background art prompt
         required: true
         default: A moonlit cartoon rooftop with a warm glowing window, no people
-  push:
-    paths: ['.github/workflows/character-cpu.yml']
 permissions:
   contents: read
 jobs:
@@ -19,6 +21,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     env:
+      SETTING: ${{ inputs.setting || 'rooftop' }}
       MOTION: ${{ inputs.motion || 'A person ducks then jumps back in surprise' }}
       BACKGROUND: ${{ inputs.background || 'Moonlit cartoon rooftop with a warm glowing window, no people' }}
     steps:
@@ -46,6 +49,22 @@ jobs:
           curl -fL --retry 3 https://huggingface.co/gpustack/stable-diffusion-v2-1-turbo-GGUF/resolve/1316499/stable-diffusion-v2-1-turbo-Q4_0.gguf -o worker-bin/turbo.gguf
           export SD_BIN="$PWD/worker-bin/build/bin/sd-cli" SD_MODEL="$PWD/worker-bin/turbo.gguf"
           bash motion-worker/cpu-background.sh "$BACKGROUND" output/diffusion.png
+      - name: Composite character, plate, physics and audio into the episode
+        if: ${{ !cancelled() && hashFiles('output/character/pose.json') != '' }}
+        run: |
+          set -eu
+          sudo apt-get install -y --no-install-recommends python3-cairo ffmpeg
+          npm install --prefix kinetic-studio --ignore-scripts --no-audit --no-fund
+          PLATE=output/diffusion.png
+          if [ ! -s "$PLATE" ]; then PLATE=output/cycles.png; fi
+          python3 - <<'PYTHON'
+          import json, os
+          plan = dict(prompt=os.environ["MOTION"], place=os.environ["SETTING"], prop="clock",
+                      move="drop", reaction="jump", camera="wide", tone="night")
+          with open("output/scene.json", "w") as out:
+              json.dump(plan, out)
+          PYTHON
+          /usr/bin/python3 kinetic-studio/film.py "$MOTION" output/episode --motion-clip output/character --cached-plan output/scene.json --background-plate "$PLATE" --width 540
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
