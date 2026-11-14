@@ -50,6 +50,7 @@ import {renderVideo} from '@revideo/renderer';
 async function main() {
  const file=await renderVideo({projectFile:'./src/project.ts',settings:{
   outFile:'render.mp4',outDir:'.',workers:1,range:[0,0.65],dimensions:[160,90],
+  projectSettings:{exporter:{name:'@revideo/core/wasm'}},
   logProgress:true,ffmpeg:{ffmpegPath:'ffmpeg'},puppeteer:{args:['--no-sandbox']}
  }});
  console.log("Revideo output",file);
