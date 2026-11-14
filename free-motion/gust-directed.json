@@ -1,0 +1,55 @@
+{
+  "prompt": "Mira shields her face with her right forearm against a gust, leans away, then lowers her arm.",
+  "channels": [
+    "body",
+    "head",
+    "armL",
+    "handL",
+    "armR",
+    "handR",
+    "legL",
+    "legR"
+  ],
+  "poses": [
+    [
+      4,
+      8,
+      -7,
+      4,
+      24,
+      35,
+      -3,
+      0
+    ],
+    [
+      12,
+      12,
+      -24,
+      -20,
+      112,
+      99,
+      -8,
+      -12
+    ],
+    [
+      10,
+      -6,
+      -16,
+      -4,
+      133,
+      90,
+      -7,
+      -9
+    ],
+    [
+      1,
+      -8,
+      -3,
+      0,
+      10,
+      7,
+      0,
+      0
+    ]
+  ]
+}
