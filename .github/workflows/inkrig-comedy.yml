@@ -18,11 +18,13 @@ jobs:
       - name: Install Cairo vector animator and FFmpeg
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq libcairo2-dev pkg-config ffmpeg
+          sudo apt-get install -y -qq libcairo2-dev pkg-config ffmpeg espeak-ng
           python -m pip install --quiet pycairo
           python -m py_compile inkrig/inkrig_animation.py
       - name: Generate original body-motion anime short with per-frame lip/eye/limb art
         run: python -u inkrig/inkrig_animation.py
+      - name: Compose original scripted comedic voices
+        run: bash inkrig/voice_dub.sh
       - name: Validate motion MP4, duration, provenance
         run: |
           ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json inkrig/output/original-rigged-2d-comedy.mp4
