@@ -1,0 +1,109 @@
+name: EXPERIMENT - Iki real auto-rig vs Blender 2D skeleton motion
+on:
+  push:
+    branches: [experiment/iki-blender-prompt-puppet-20261116]
+    paths: ['puppet-lab/**','.github/workflows/experiment-iki-blender-puppet.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  iki-real-auto-rig:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+      - name: Install pinned Iki package manager and clone official MIT source
+        run: |
+          npm install -g pnpm@11.25.0
+          git clone -q --depth 1 https://github.com/zeikar/iki.git "$RUNNER_TEMP/iki"
+          cp puppet-lab/iki_trial.mjs "$RUNNER_TEMP/iki/puppet-lab-iki_trial.mjs"
+          mkdir -p "$RUNNER_TEMP/iki/puppet-lab"
+          mv "$RUNNER_TEMP/iki/puppet-lab-iki_trial.mjs" "$RUNNER_TEMP/iki/puppet-lab/iki_trial.mjs"
+          git -C "$RUNNER_TEMP/iki" rev-parse HEAD > puppet-lab/iki-source-commit.txt
+      - name: Build Iki engine/editor/MCP packages and run real auto-rig regression
+        run: |
+          cd "$RUNNER_TEMP/iki"
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm exec vitest run packages/editor/__tests__/auto-rig.test.ts
+      - name: Auto-rig actual PNG layers then render 3 WebGL poses through headless Chrome
+        run: |
+          cd "$RUNNER_TEMP/iki"
+          CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)" node puppet-lab/iki_trial.mjs
+          cp -r puppet-test-output "$GITHUB_WORKSPACE/puppet-lab/output/iki"
+      - name: Upload validated Iki file and genuine pose PNGs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: separate-iki-real-auto-rig-and-rendered-poses
+          path: |
+            puppet-lab/output/iki/
+            puppet-lab/iki-source-commit.txt
+          if-no-files-found: warn
+          retention-days: 7
+  blender-new-2d-armature:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 19
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install real Blender + FFmpeg on CPU runner
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq blender ffmpeg
+          blender --version | head -3
+      - name: Compile and validate prompt-to-six-actions JSON
+        run: |
+          python -m py_compile puppet-lab/prompt_to_motion.py puppet-lab/blender_armature.py
+          python puppet-lab/prompt_to_motion.py
+          python - <<'PY'
+          import json
+          d=json.load(open('puppet-lab/output/motion-plan.json'))
+          assert len(d['actions'])>=6, d
+          assert d['total_output_frames']>100
+          print('SEPARATE_MOTION_PLAN_VERIFIED',[(x['action'],x['t']) for x in d['actions']])
+          PY
+      - name: Actually render articulated 2D armature clip in Blender
+        run: |
+          blender -b -t 2 --factory-startup --python puppet-lab/blender_armature.py > "$RUNNER_TEMP/blender-puppet.log" 2>&1 || {
+            tail -100 "$RUNNER_TEMP/blender-puppet.log"
+            exit 1
+          }
+          grep 'BLENDER_REAL_BONE_ANIMATED_MP4_PASS' "$RUNNER_TEMP/blender-puppet.log"
+      - name: Verify real MP4, skeleton keyframes, and changed source frames
+        run: |
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json puppet-lab/output/blender/blender-prompt-armature-comedy.mp4
+          python - <<'PY'
+          from pathlib import Path
+          import json,hashlib
+          p=Path('puppet-lab/output/blender')
+          data=json.loads((p/'blender-result.json').read_text())
+          assert data['blender_armature_bones']>=12
+          assert data['actual_rendered_frames']>=72
+          assert data['demonstrated_rotating_leg']
+          assert data['diffusion_frames'] is False
+          a=(p/'frames/frame_0001.png').read_bytes()
+          b=(p/'frames/frame_0014.png').read_bytes()
+          assert hashlib.sha256(a).hexdigest()!=hashlib.sha256(b).hexdigest(), 'identical source frames'
+          assert (p/'blender-prompt-armature-comedy.mp4').stat().st_size>15000
+          print('BLENDER_TRUE_MOVING_BONES_AND_DISTINCT_RENDERED_FRAMES_PASS')
+          PY
+      - name: Upload new generated Blender 2D short, editable scene and evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: separate-blender-skeletal-prompt-2d-motion-mp4
+          path: |
+            puppet-lab/output/motion-plan.json
+            puppet-lab/output/blender/blender-prompt-armature-comedy.mp4
+            puppet-lab/output/blender/prompt-puppet-skeletal.blend
+            puppet-lab/output/blender/blender-result.json
+            puppet-lab/output/blender/frames/frame_0001.png
+            puppet-lab/output/blender/frames/frame_0014.png
+          if-no-files-found: warn
+          retention-days: 7
