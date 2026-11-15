@@ -27,6 +27,8 @@ jobs:
           path: inkrig/output
       - name: Extract one REAL animated keyframe from InkRig video, no reused slideshow
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
           mkdir -p horde-guided
           python -m pip install -q Pillow
           ffmpeg -y -loglevel error -ss 5.50 -i inkrig/output/original-rigged-2d-comedy.mp4 -frames:v 1 -vf "scale=512:768:force_original_aspect_ratio=decrease,pad=512:768:(ow-iw)/2:(oh-ih)/2" horde-guided/pose-source.png
