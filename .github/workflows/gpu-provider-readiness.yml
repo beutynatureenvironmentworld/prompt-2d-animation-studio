@@ -1,0 +1,40 @@
+name: GPU providers readiness (offline, no secrets)
+on:
+  push:
+    branches: ['feature/gpu-provider-readiness-20261115']
+    paths:
+      - 'hybrid-gpu/provider_readiness.py'
+      - 'hybrid-gpu/bootstrap.sh'
+      - 'hybrid-gpu/tests/**'
+      - '.github/workflows/gpu-provider-readiness.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  readiness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify scripts and tests offline
+        run: |
+          bash -n hybrid-gpu/bootstrap.sh
+          python3 -m compileall -q hybrid-gpu/provider_readiness.py hybrid-gpu/tests
+          python3 -m unittest discover -s hybrid-gpu/tests -v
+          bash hybrid-gpu/bootstrap.sh --check > gpu-readiness.json
+      - name: Record explicit provider readiness without credentials
+        run: |
+          python3 - <<'PY'
+          import json
+          a=json.load(open('gpu-readiness.json'))
+          assert a['repository']['required_files_present']
+          assert all(v['valid_json'] for v in a['repository']['comfy_graphs'].values())
+          assert all(not p['gpu_video_render_verified'] for p in a['providers'].values())
+          print('READINESS CHECK PASSED. GPU connection still requires provider account authorization.')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: provider-readiness-no-secrets
+          path: gpu-readiness.json
+          if-no-files-found: error
+          retention-days: 7
