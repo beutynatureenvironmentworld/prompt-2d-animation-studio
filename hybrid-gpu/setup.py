@@ -18,6 +18,8 @@ FILES = {
         "diffusion_models/wan2.1_i2v_480p_14B_fp8_scaled.safetensors","vae/wan_2.1_vae.safetensors",
         "text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors","clip_vision/clip_vision_h.safetensors")],
     "toon": [
+        ("Kijai/DynamiCrafter_pruned","1a427ad0865b5447f93bb8e32cd703f45ea1fcb0","tooncrafter_512_interp-pruned-fp16.safetensors","checkpoints/dynamicrafter"),
+        ("Kijai/CLIPVisionModelWithProjection_fp16","d7daa6e96bf11fc2ed6f0a12ca58fbdb8dfa9ebb","CLIP-ViT-H-fp16.safetensors","clip_vision"),
         ("stabilityai/sd-vae-ft-mse-original","629b3ad3030ce36e15e70c5db7d91df0d60c627f","vae-ft-mse-840000-ema-pruned.safetensors","vae"),
         ("Manojb/stable-diffusion-2-1-base","0094d483a120f3f33dafbd187ea4aa60d10de75c","text_encoder/model.fp16.safetensors","clip/stable-diffusion-2-1-clip-fp16.safetensors")],
 }
