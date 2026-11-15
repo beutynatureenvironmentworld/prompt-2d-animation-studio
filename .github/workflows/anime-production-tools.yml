@@ -50,7 +50,7 @@ jobs:
           git clone -q --depth 1 https://github.com/Lightricks/LTX-Video.git "$RUNNER_TEMP/optional-model-sources/LTX-Video"
           git clone -q --depth 1 https://github.com/comfyanonymous/ComfyUI.git "$RUNNER_TEMP/optional-model-sources/ComfyUI"
           git clone -q --depth 1 https://github.com/Wan-Video/Wan2.1.git "$RUNNER_TEMP/optional-model-sources/Wan2.1"
-          git clone -q --depth 1 https://github.com/TencentARC/ToonCrafter.git "$RUNNER_TEMP/optional-model-sources/ToonCrafter"
+          git clone -q --depth 1 https://github.com/Doubiiu/ToonCrafter.git "$RUNNER_TEMP/optional-model-sources/ToonCrafter"
           for model in LTX-Video ComfyUI Wan2.1 ToonCrafter; do
             test -s "$RUNNER_TEMP/optional-model-sources/$model/README.md" || test -s "$RUNNER_TEMP/optional-model-sources/$model/readme.md"
             echo "SOURCE_CHECKED_OUT_$model (NO MODEL WEIGHTS NOR GPU INFERENCE)"
