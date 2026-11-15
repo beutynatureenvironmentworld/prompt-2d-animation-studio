@@ -1,0 +1,64 @@
+name: Collect first private Kaggle GPU smoke result
+on:
+  push:
+    branches: [feature/kaggle-30h-efficient-studio]
+    paths: ['.github/workflows/kaggle-collect-first.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  collect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+      PROBE_SLUG: vidbest-probe-43739576629-a339826a
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch status without revealing authentication
+        run: |
+          mkdir -p kaggle-studio/probe-output
+          if [ -z "$KAGGLE_API_TOKEN" ] || [ -z "$KAGGLE_USERNAME" ]; then
+            echo 'No Kaggle credentials configured' | tee kaggle-studio/probe-output/status.txt
+            exit 0
+          fi
+          python -m pip install --quiet kaggle six
+          kernel="$KAGGLE_USERNAME/$PROBE_SLUG"
+          for n in 1 2 3 4 5 6; do
+            kaggle kernels status "$kernel" 2>&1 | tee kaggle-studio/probe-output/status.txt
+            if grep -Eiq 'complete|success|failed|error|cancel' kaggle-studio/probe-output/status.txt; then
+              break
+            fi
+            [ "$n" = 6 ] || sleep 10
+          done
+          if grep -Eiq 'complete|success' kaggle-studio/probe-output/status.txt; then
+            kaggle kernels output "$kernel" -p kaggle-studio/probe-output -o
+            if [ -f kaggle-studio/probe-output/gpu-studio-result.json ]; then
+              python - <<'PY'
+          import json
+          a=json.load(open("kaggle-studio/probe-output/gpu-studio-result.json"))
+          assert a["cuda_verified"] is True
+          assert a["model_inference_verified"] is False
+          print("REAL_CUDA_GPU_TEST_PASS",a["devices"],a["elapsed_seconds"])
+          PY
+            else
+              echo 'Kernel completed but expected CUDA report missing' >&2
+              exit 1
+            fi
+          elif grep -Eiq 'failed|error|cancel' kaggle-studio/probe-output/status.txt; then
+            echo 'Kaggle kernel failed; read private Kaggle logs' >&2
+            exit 1
+          else
+            echo 'Kaggle job still queued/running; no GPU completion claim.'
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: private-kaggle-gpu-probe-evidence
+          path: kaggle-studio/probe-output/
+          retention-days: 7
+          if-no-files-found: warn
