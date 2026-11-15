@@ -149,7 +149,8 @@
       "image": [
         "82",
         0
-      ]
+      ],
+      "strength": 1.0
     },
     "class_type": "LTXVImgToVideo"
   },
