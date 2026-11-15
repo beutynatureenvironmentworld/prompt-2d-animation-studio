@@ -1,0 +1,32 @@
+name: AI Horde key check and Colab notebook validation
+on:
+  push:
+    branches: [feature/ai-horde-secret-check-colab-only]
+    paths:
+      - 'colab-studio/**'
+      - '.github/workflows/horde-colab-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static tests; no cloud GPU, no model weights
+        run: |
+          python3 -m unittest discover -s colab-studio -p 'test_*.py' -v
+          python3 colab-studio/validate_notebook.py colab-studio/VidBest_Colab_2D_AI_Test.ipynb
+      - name: Verify GitHub secret against AI Horde find_user API
+        env:
+          AI_HORDE_API_KEY: ${{ secrets.AI_HORDE_API_KEY }}
+        run: python3 colab-studio/check_horde_key.py
+      - name: Upload non-secret status only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-horde-verification-no-secrets
+          path: colab-studio/ai-horde-check.json
+          retention-days: 3
+          if-no-files-found: warn
