@@ -48,7 +48,7 @@ def main():
     print("HORDE_AUTHENTICATED",flush=True)
     requests={}; failures={}; complete={}
     started=time.monotonic()
-    for i,(slug,description) in enumerate(SCENES):
+    for i,(slug,description) in enumerate(SCENES[:2]):
         try:
             payload={"prompt":description+", high quality cel shaded anime, bold ink outlines, vivid funny pose, full body, vertical 9:16 ### "+NEG,
               "params":{"sampler_name":"k_euler_a","steps":16,"cfg_scale":7,"width":512,"height":768,"n":1,"seed":str(72070+i)},
