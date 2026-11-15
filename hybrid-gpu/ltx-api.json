@@ -1,0 +1,166 @@
+{
+  "6": {
+    "inputs": {
+      "text": "Motion prompt",
+      "clip": [
+        "38",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "7": {
+    "inputs": {
+      "text": "low quality, worst quality, deformed, distorted, disfigured, motion smear, motion artifacts, fused fingers, bad anatomy, weird hand, ugly",
+      "clip": [
+        "38",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "8": {
+    "inputs": {
+      "samples": [
+        "72",
+        0
+      ],
+      "vae": [
+        "44",
+        2
+      ]
+    },
+    "class_type": "VAEDecode"
+  },
+  "38": {
+    "inputs": {
+      "clip_name": "t5xxl_fp16.safetensors",
+      "type": "ltxv",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader"
+  },
+  "44": {
+    "inputs": {
+      "ckpt_name": "ltx-video-2b-v0.9.5.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple"
+  },
+  "69": {
+    "inputs": {
+      "frame_rate": 24,
+      "positive": [
+        "95",
+        0
+      ],
+      "negative": [
+        "95",
+        1
+      ]
+    },
+    "class_type": "LTXVConditioning"
+  },
+  "71": {
+    "inputs": {
+      "steps": 30,
+      "max_shift": 2.05,
+      "base_shift": 0.95,
+      "stretch": true,
+      "terminal": 0.1,
+      "latent": [
+        "95",
+        2
+      ]
+    },
+    "class_type": "LTXVScheduler"
+  },
+  "72": {
+    "inputs": {
+      "add_noise": true,
+      "noise_seed": 1092847494041144,
+      "cfg": 3.0,
+      "model": [
+        "44",
+        0
+      ],
+      "positive": [
+        "69",
+        0
+      ],
+      "negative": [
+        "69",
+        1
+      ],
+      "sampler": [
+        "73",
+        0
+      ],
+      "sigmas": [
+        "71",
+        0
+      ],
+      "latent_image": [
+        "95",
+        2
+      ]
+    },
+    "class_type": "SamplerCustom"
+  },
+  "73": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect"
+  },
+  "78": {
+    "inputs": {
+      "image": "reference.png"
+    },
+    "class_type": "LoadImage"
+  },
+  "82": {
+    "inputs": {
+      "img_compression": 40,
+      "image": [
+        "78",
+        0
+      ]
+    },
+    "class_type": "LTXVPreprocess"
+  },
+  "95": {
+    "inputs": {
+      "width": 768,
+      "height": 512,
+      "length": 97,
+      "batch_size": 1,
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "vae": [
+        "44",
+        2
+      ],
+      "image": [
+        "82",
+        0
+      ]
+    },
+    "class_type": "LTXVImgToVideo"
+  },
+  "99": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "8",
+        0
+      ],
+      "filename_prefix": "vidbest"
+    }
+  }
+}
