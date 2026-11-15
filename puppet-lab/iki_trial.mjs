@@ -28,7 +28,7 @@ const detail=describeIki(file);
 if(!detail.ok)throw new Error("Could not describe Iki: "+detail.error);
 const params=file.parameters.map(x=>x.id);
 const mouth=params.find(x=>x.includes("MouthOpen"));
-const eye=params.filter(x=>x.includes("EyeOpen"));
+const eye=params.filter(x=>/^ParamEye[LR]Open$/.test(x));
 const blink=Object.fromEntries(eye.map(e=>[e,0]));
 const smile=mouth?{[mouth]:1}:{};
 const poses=[{name:"01-idle",values:{}},

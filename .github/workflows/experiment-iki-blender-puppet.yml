@@ -55,7 +55,7 @@ jobs:
       - name: Install real Blender + FFmpeg on CPU runner
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq blender ffmpeg
+          sudo apt-get install -y -qq blender ffmpeg xvfb libegl1 libgl1-mesa-dri libgl1 libgbm1
           blender --version | head -3
       - name: Compile and validate prompt-to-six-actions JSON
         run: |
@@ -70,7 +70,7 @@ jobs:
           PY
       - name: Actually render articulated 2D armature clip in Blender
         run: |
-          blender -b -t 2 --factory-startup --python puppet-lab/blender_armature.py > "$RUNNER_TEMP/blender-puppet.log" 2>&1 || {
+          xvfb-run -a blender -b -t 2 --factory-startup --python puppet-lab/blender_armature.py > "$RUNNER_TEMP/blender-puppet.log" 2>&1 || {
             tail -100 "$RUNNER_TEMP/blender-puppet.log"
             exit 1
           }
