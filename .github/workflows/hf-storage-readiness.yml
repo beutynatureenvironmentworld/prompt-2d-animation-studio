@@ -1,0 +1,27 @@
+name: Verify Hugging Face private model storage without exposing full token
+on:
+  push:
+    branches: [feature/rigged-2d-action-anime-upgrade]
+    paths: ['hf-storage/**','.github/workflows/hf-storage-readiness.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  read-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check token with HF official API, NO uploads or repo creation
+        run: python hf-storage/check.py
+      - name: Upload small sanitized status JSON
+        uses: actions/upload-artifact@v4
+        with:
+          name: huggingface-storage-no-secrets-readiness
+          path: hf-storage/output/hf-storage-check.json
+          retention-days: 3

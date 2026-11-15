@@ -1,0 +1,39 @@
+name: Create private Hugging Face storage and upload original 2D animation demo
+on:
+  push:
+    branches: [feature/rigged-2d-action-anime-upgrade]
+    paths: ['hf-storage/upload_private.py','.github/workflows/hf-upload-original-demo.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  storage-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 43749228274
+          repository: beutynatureenvironmentworld/prompt-2d-animation-studio
+          github-token: ${{ github.token }}
+          name: inkrig-original-cartoon-skeletal-action-demo
+          path: inkrig/output
+      - name: Official HF hub API — private repo & one own demo MP4
+        run: |
+          python -m pip install --quiet 'huggingface_hub>=0.35,<2'
+          python -u hf-storage/upload_private.py
+      - name: Upload only sanitized report (not credentials)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hf-private-storage-real-upload-proof
+          path: hf-storage/output/hf-private-storage-upload.json
+          retention-days: 7
+          if-no-files-found: warn

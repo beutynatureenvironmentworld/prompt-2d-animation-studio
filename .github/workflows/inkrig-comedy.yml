@@ -1,0 +1,46 @@
+name: InkRig original 2D comedy - true frame-by-frame skeletal movement
+on:
+  push:
+    branches: [feature/rigged-2d-action-anime-upgrade]
+    paths: ['inkrig/**','.github/workflows/inkrig-comedy.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Cairo vector animator and FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libcairo2-dev pkg-config ffmpeg espeak-ng
+          python -m pip install --quiet pycairo
+          python -m py_compile inkrig/inkrig_animation.py
+      - name: Generate original body-motion anime short with per-frame lip/eye/limb art
+        run: python -u inkrig/inkrig_animation.py
+      - name: Compose original scripted comedic voices
+        run: bash inkrig/voice_dub.sh
+      - name: Validate motion MP4, duration, provenance
+        run: |
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json inkrig/output/original-rigged-2d-comedy.mp4
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('inkrig/output/original-rigged-2d-comedy.json')
+          d=json.loads(p.read_text())
+          assert d['real_skeleton_motion'] and not d['gpu_video_diffusion']
+          assert d['duration_seconds']>=11
+          assert Path(d['delivered_new_mp4']).stat().st_size>40000
+          print('TRUE_SKELETAL_MOVEMENT_PREVIEW_PASS')
+          PY
+      - name: Original animated comedy media
+        uses: actions/upload-artifact@v4
+        with:
+          name: inkrig-original-cartoon-skeletal-action-demo
+          path: inkrig/output/
+          retention-days: 7
