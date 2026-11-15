@@ -1,7 +1,6 @@
 """Prioritise finished results, one private Kaggle submission, then available workers."""
 import argparse
 import fcntl
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -79,7 +78,13 @@ def main():
                     return
                 time.sleep(min(30,max(0,end-time.monotonic())))
         if a.hf_space_config:
-            hf_shots(bundle,job,a.model,a.hf_space_config)
+            try:
+                hf_shots(bundle,job,a.model,a.hf_space_config)
+            except Exception as error:
+                print("Space render incomplete:", type(error).__name__, str(error)[:400])
+                print("Use the interactive handoff at",job/"interactive.ipynb",file=sys.stderr)
+                process(bundle,out,a.model,None,False)
+                raise SystemExit(2)
             process(bundle,out,a.model,None,False)
         else:print("GPU handoff notebook:",job/"interactive.ipynb")
 if __name__=="__main__":main()
