@@ -6,7 +6,7 @@ from __future__ import annotations
 import json,os,sys,urllib.request,urllib.error
 from pathlib import Path
 
-URL="https://aihorde.net/api/v2/find_user"
+URL="https://stablehorde.net/api/v2/find_user"
 
 def check(key: str, opener=None) -> dict:
     if not key or not key.strip():
