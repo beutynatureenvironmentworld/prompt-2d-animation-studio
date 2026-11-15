@@ -1,0 +1,54 @@
+name: Free CPU cartoon and GPU notebook handoff
+on:
+  push:
+    branches: [main, 'feature/**']
+    paths:
+      - 'hybrid-gpu/cpu_handoff_smoke.py'
+      - '.github/workflows/free-cpu-gpu-handoff.yml'
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Notebook backend only (not a GPU inference run)
+        type: choice
+        required: true
+        default: ltx
+        options: [ltx, wan, toon]
+permissions:
+  contents: read
+jobs:
+  cpu-handoff:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      SELECTED_MODEL: ${{ inputs.model || 'ltx' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install CPU tools only (no weights, no provider credentials)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends python3-cairo ffmpeg
+          /usr/bin/python3 -c 'import cairo; print(cairo.version)'
+          ffmpeg -version | head -n 1
+      - name: Exercise reusable Snap2D character renderer
+        run: /usr/bin/python3 -m unittest discover -s snap2d/tests -v
+      - name: Render silent video, create bundle and offline GPU trial notebook
+        run: |
+          python3 hybrid-gpu/cpu_handoff_smoke.py --model "$SELECTED_MODEL" --output handoff-test
+          test -s handoff-test/watch-me-silent.mp4
+          test -s handoff-test/gpu-handoff-bundle.zip
+          test -s handoff-test/gpu-trial-notebook.ipynb
+          ffprobe -v error -show_entries stream=codec_name,codec_type,width,height -of json handoff-test/watch-me-silent.mp4
+      - name: Upload real CPU MP4 and portable GPU handoff
+        uses: actions/upload-artifact@v4
+        with:
+          name: free-cartoon-and-gpu-handoff
+          path: |
+            handoff-test/watch-me-silent.mp4
+            handoff-test/original-silent-cartoon.mp4
+            handoff-test/editable-cartoon-storyboard.json
+            handoff-test/gpu-shot-plan.json
+            handoff-test/gpu-handoff-bundle.zip
+            handoff-test/gpu-trial-notebook.ipynb
+            handoff-test/test-result.json
+          retention-days: 7
+          if-no-files-found: error
