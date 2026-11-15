@@ -1,0 +1,68 @@
+name: EXPERIMENT Synfig native vector puppet animation
+on:
+  push:
+    branches: [experiment/iki-blender-prompt-puppet-20261116]
+    paths:
+      - 'puppet-lab/synfig_native_demo.py'
+      - '.github/workflows/experiment-synfig-native.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synfig-native-vector:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install open-source Synfig native renderer and FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq synfig ffmpeg
+          command -v synfig
+          synfig --help | head -65
+      - name: Create original Synfig SIF vector layers with native animated waypoints
+        run: |
+          python puppet-lab/synfig_native_demo.py
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          p='puppet-lab/output/synfig/original-native-synfig-animated-puppet.sif'
+          root=ET.parse(p).getroot()
+          assert len(root.findall('layer'))>=9
+          assert all(len(layer.findall('./param[@name="pos"]/animated/waypoint'))==8 for layer in root.findall('layer'))
+          print('ORIGINAL_SYNFIG_NATIVE_VECTOR_ANIMATED_WAYPOINTS_PASS')
+          PY
+      - name: Render real Synfig engine frames and encode original MP4
+        run: |
+          set -euo pipefail
+          mkdir -p puppet-lab/output/synfig/frames
+          synfig puppet-lab/output/synfig/original-native-synfig-animated-puppet.sif -t png -o puppet-lab/output/synfig/frames/scene.png
+          ls -la puppet-lab/output/synfig/frames | head -12
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('puppet-lab/output/synfig/frames')
+          f=sorted(p.glob('*.png'))
+          assert len(f)>=100, f'Expected native animated Synfig PNG sequence, found {len(f)}'
+          assert f[0].read_bytes()!=f[len(f)//2].read_bytes(), 'Synfig scene is static'
+          print('SYNFIG_NATIVE_ANIMATED_PNG_FRAMES_PASS',len(f))
+          PY
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('puppet-lab/output/synfig/frames')
+          files=sorted(p.glob('*.png'))
+          for i,f in enumerate(files):
+              f.rename(p/f'frame-{i:04}.png')
+          PY
+          ffmpeg -hide_banner -loglevel error -y -framerate 24 -i puppet-lab/output/synfig/frames/frame-%04d.png -c:v libx264 -pix_fmt yuv420p -preset veryfast -crf 22 puppet-lab/output/synfig/native-synfig-animated-original.mp4
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json puppet-lab/output/synfig/native-synfig-animated-original.mp4
+      - name: Upload native Synfig SIF, sample frames, and MP4
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: original-synfig-native-vector-animation
+          path: |
+            puppet-lab/output/synfig/*.sif
+            puppet-lab/output/synfig/*.mp4
+            puppet-lab/output/synfig/frames/frame-0000.png
+            puppet-lab/output/synfig/frames/frame-0070.png
+          retention-days: 7
+          if-no-files-found: warn
