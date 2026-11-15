@@ -68,6 +68,13 @@ scene.render.image_settings.file_format="PNG"
 scene.render.film_transparent=False
 scene.render.fps=FPS
 scene.frame_start=1;scene.frame_end=FRAME_COUNT
+camd=bpy.data.cameras.new("Orthographic cartoon camera")
+camera=bpy.data.objects.new("Camera",camd)
+scene.collection.objects.link(camera)
+camera.location=(0,0,15)
+camd.type="ORTHO"
+camd.ortho_scale=7.8
+scene.camera=camera
 add_rect("Paper wall",0,0,8,12,BG,z=-8)
 add_rect("floor shadow",0,-2.5,8,.05,color("68716e"),z=-1)
 # Separate door with dark outline and bright cream inner panel.
