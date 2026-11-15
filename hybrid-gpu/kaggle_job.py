@@ -18,7 +18,13 @@ def main():
     key=hashlib.sha256(a.bundle.read_bytes()).hexdigest()[:16]
     title=f"Vidbest {a.model} {key}"; slug=title.lower().replace(" ","-"); identifier=f"{a.username}/{slug}"
     with tempfile.TemporaryDirectory() as d:
-        root=Path(d);build(root/"episode.ipynb",a.bundle,a.model)
+        root=Path(d)
+        if a.bundle.suffix==".ipynb":
+            nb=json.loads(a.bundle.read_text())
+            nb["cells"][1]["source"][0]=f"MODEL = {a.model!r}\n"
+            (root/"episode.ipynb").write_text(json.dumps(nb))
+        else:
+            build(root/"episode.ipynb",a.bundle,a.model)
         (root/"kernel-metadata.json").write_text(json.dumps({"id":identifier,"title":title,"code_file":"episode.ipynb","language":"python","kernel_type":"notebook","is_private":True,"enable_gpu":True,"enable_internet":True,"dataset_sources":[],"kernel_sources":[],"competition_sources":[]}))
         print(f"Status: kaggle kernels status {identifier}\nDownload: kaggle kernels output {identifier} -p renders",flush=True)
         subprocess.run(["kaggle","kernels","push","-p",d,"--accelerator","NvidiaTeslaT4","-t",str(a.minutes*60)],check=True)
