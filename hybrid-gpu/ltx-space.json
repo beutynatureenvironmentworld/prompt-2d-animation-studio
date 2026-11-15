@@ -1,0 +1,18 @@
+{
+  "space": "Lightricks/ltx-video-distilled",
+  "api_name": "/image_to_video",
+  "inputs": {
+    "input_image_filepath": "$first",
+    "prompt": "$prompt",
+    "height_ui": 512,
+    "width_ui": 320,
+    "duration_ui": 2,
+    "randomize_seed": false,
+    "seed_ui": "$seed",
+    "improve_texture_flag": false
+  },
+  "output_path": [
+    0,
+    "video"
+  ]
+}
