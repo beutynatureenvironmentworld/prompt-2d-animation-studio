@@ -60,7 +60,7 @@ def main():
             print("NEW_AI_IMAGE_SUBMITTED",slug,id,flush=True)
         except Exception as e:
             failures[slug]=str(e)
-            print("HORDE_SUBMIT_ERROR",slug,type(e).__name__,flush=True)
+            print("HORDE_SUBMIT_ERROR",slug,str(e),flush=True)
     (OUT/"submitted-ids.json").write_text(json.dumps(requests,indent=2)+"\n")
     for round_no in range(36):
         if not requests:break
