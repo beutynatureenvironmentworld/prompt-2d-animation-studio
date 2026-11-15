@@ -34,6 +34,18 @@ const smile=mouth?{[mouth]:1}:{};
 const poses=[{name:"01-idle",values:{}},
  {name:"02-mouth-open",values:smile},
  {name:"03-eye-blink",values:blink}];
+for (let i=0;i<24;i++){
+  const p=i/24;
+  const turn=Math.round(22*Math.sin(2*Math.PI*p));
+  const nod=Math.round(9*Math.sin(2*Math.PI*p+.9));
+  const tilt=Math.round(7*Math.sin(2*Math.PI*p+1.9));
+  const open=(i>=6 && i<=18) ? ([.1,.5,.8,.25,.9,.3][i%6]) : 0;
+  const shut = i===5 || i===6 || i===17;
+  const values={"ParamAngleX":turn,"ParamAngleY":nod,"ParamAngleZ":tilt,
+    ...(mouth?{[mouth]:open}:{}),
+    ...Object.fromEntries(eye.map(e=>[e,shut?0:1]))};
+  poses.push({name:"face_"+String(i+1).padStart(3,"0"),values});
+}
 if(!mouth || eye.length<2)throw new Error("Auto-rig must include mouth and both eye blink controls");
 const dest=path.join(output,"iki-poses");
 fs.mkdirSync(dest,{recursive:true});
@@ -49,11 +61,11 @@ const report={
  from_prompt:"motion-plan compiled independently, not a true text-to-image layer generator",
  model_generated:true,valid_open_iki:true,
  original_user_art_created:false,
- face_pose_images_rendered:3,
+ face_pose_images_rendered:poses.length,
  full_body_walk_from_iki_verified:false,
  part_count:file.parts.length, parameter_count:file.parameters.length,
  blink_parameter_ids:eye, mouth_parameter_id:mouth,
  important:"This validates real Iki rig creation and three WebGL pose renders. It does not prove instant perfect full-body auto-animation."
 };
 fs.writeFileSync(path.join(output,"iki-report.json"),JSON.stringify(report,null,2)+"\n");
-console.log("IKI_AUTO_RIG_REAL_MODEL_AND_THREE_POSES_PASS",JSON.stringify({parts:report.part_count,params:report.parameter_count}));
+console.log("IKI_AUTO_RIG_REAL_MODEL_AND_POSE_SWEEP_PASS",JSON.stringify({parts:report.part_count,params:report.parameter_count}));
