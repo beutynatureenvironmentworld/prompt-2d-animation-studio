@@ -39,7 +39,7 @@ def create_job(output: Path, owner: str, mode: str, minutes: int, job_id: str = 
     slug = slug[:64].rstrip("-")
     identifier = owner + "/" + slug
     metadata = {
-        "id": identifier, "title": "VidBest " + mode + " " + suffix,
+        "id": identifier, "title": "VidBest " + mode + " " + job_id.lower() + " " + suffix,
         "code_file": "gpu_job.py", "language": "python", "kernel_type": "script",
         "is_private": True, "enable_gpu": True, "machine_shape": "NvidiaTeslaT4",
         "enable_internet": mode == "pose-ai",
