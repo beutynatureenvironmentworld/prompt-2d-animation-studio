@@ -1,0 +1,44 @@
+name: Test ONE AI Horde original character-pose img2img guidance
+on:
+  push:
+    branches: [feature/rigged-2d-action-anime-upgrade]
+    paths: ['horde-guided/**','.github/workflows/horde-pose-guidance.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  guided-style:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 9
+    env:
+      AI_HORDE_API_KEY: ${{ secrets.AI_HORDE_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 43749228274
+          repository: beutynatureenvironmentworld/prompt-2d-animation-studio
+          github-token: ${{ github.token }}
+          name: inkrig-original-cartoon-skeletal-action-demo
+          path: inkrig/output
+      - name: Extract one REAL animated keyframe from InkRig video, no reused slideshow
+        run: |
+          mkdir -p horde-guided
+          python -m pip install -q Pillow
+          ffmpeg -y -loglevel error -ss 5.50 -i inkrig/output/original-rigged-2d-comedy.mp4 -frames:v 1 -vf "scale=512:768:force_original_aspect_ratio=decrease,pad=512:768:(ow-iw)/2:(oh-ih)/2" horde-guided/pose-source.png
+          python -m py_compile horde-guided/img2img_one_test.py
+      - name: ONE AI Horde worker guided 2D anime frame inference
+        run: python -u horde-guided/img2img_one_test.py
+      - name: Collect evidence regardless of outcome
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: horde-img2img-original-inkrig-pose-trial
+          path: |
+            horde-guided/pose-source.png
+            horde-guided/output/
+          retention-days: 7
