@@ -1,0 +1,41 @@
+name: Render downloaded REAL AI Horde frames (no new GPU requests)
+on:
+  push:
+    branches: [feature/real-horde-funny-anime-fallback]
+    paths: ['.github/workflows/horde-render-existing.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: fresh-ai-horde-anime-frames-and-comedy-preview
+          run-id: 43747016445
+          repository: beutynatureenvironmentworld/prompt-2d-animation-studio
+          github-token: ${{ github.token }}
+          path: horde-studio
+      - name: Install ffmpeg and Pillow for CPU animation of existing AI images
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install --quiet Pillow
+      - name: Render with only downloaded new AI Horde images
+        run: |
+          test -s horde-studio/generated/01_cat_chase.png
+          test -s horde-studio/generated/02_cartoon_trip.png
+          python -u horde-studio/render_horde_story.py
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 horde-studio/output/fresh-horde-anime-comedy-preview.mp4
+      - name: Upload reproducible video and original AI images
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-anime-horde-verified-mp4
+          path: |
+            horde-studio/generated/
+            horde-studio/output/
+          retention-days: 7

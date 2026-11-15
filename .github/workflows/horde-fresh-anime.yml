@@ -1,0 +1,53 @@
+name: AI Horde REAL fresh anime cartoon frames and short animated preview
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: horde-cartoon-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 13
+    env:
+      AI_HORDE_API_KEY: ${{ secrets.AI_HORDE_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install lightweight image and video dependencies
+        run: |
+          python -m pip install --quiet 'Pillow>=10,<12'
+          python -m py_compile horde-studio/horde_generate.py horde-studio/render_horde_story.py
+      - name: Real volunteer GPU model generation on AI Horde
+        run: python -u horde-studio/horde_generate.py
+      - name: Install required FFmpeg renderer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Cut genuinely new AI images into a 9-second moving preview
+        run: python -u horde-studio/render_horde_story.py
+      - name: Verify MP4 and honest provenance
+        run: |
+          ffprobe -v error -show_entries format=duration -of default=nw=1 horde-studio/output/fresh-horde-anime-comedy-preview.mp4
+          python - <<'PY'
+          import json
+          a=json.load(open("horde-studio/generated/status.json"))
+          b=json.load(open("horde-studio/output/provenance.json"))
+          assert a["original_ai_stills_generated"]>0
+          assert b["gpu_video_generated"] is False
+          assert b["old_snap2d_video_reused"] is False
+          print("NEW_AI_HORDE_STILLS_IN_NEW_MP4_VERIFIED")
+          PY
+      - name: Collect true generated images, video and status even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-ai-horde-anime-frames-and-comedy-preview
+          path: |
+            horde-studio/generated/
+            horde-studio/output/
+          retention-days: 7
+          if-no-files-found: warn
