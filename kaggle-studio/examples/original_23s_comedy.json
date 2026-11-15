@@ -1,0 +1,131 @@
+{
+  "version": 1,
+  "prompt": "A funny silent 23-second hand-inked 2D comedy: a sneaky cookie thief tries to outsmart an irritable roommate, rushes, falls, overreacts, and the cat steals the prize. Reusable authored character rigs with exaggerated eyes, chase poses, camera punch-ins and fast reaction cuts.",
+  "title": "THE LAST COOKIE — DOUBLE TROUBLE",
+  "style": "original hand inked comedic 2D vector animation",
+  "fps": 24,
+  "width": 360,
+  "height": 640,
+  "sound": false,
+  "shots": [
+    {
+      "name": "setup",
+      "start": 0,
+      "duration": 1.1,
+      "action": "setup",
+      "camera": "composed"
+    },
+    {
+      "name": "sneak",
+      "start": 1.1,
+      "duration": 1.6,
+      "action": "sneak",
+      "camera": "composed"
+    },
+    {
+      "name": "grab",
+      "start": 2.7,
+      "duration": 0.85,
+      "action": "grab",
+      "camera": "composed"
+    },
+    {
+      "name": "glare",
+      "start": 3.55,
+      "duration": 1.2,
+      "action": "glare",
+      "camera": "reaction-closeup"
+    },
+    {
+      "name": "chase",
+      "start": 4.75,
+      "duration": 1.7,
+      "action": "chase",
+      "camera": "composed"
+    },
+    {
+      "name": "trip",
+      "start": 6.45,
+      "duration": 1.35,
+      "action": "trip",
+      "camera": "composed"
+    },
+    {
+      "name": "shock",
+      "start": 7.8,
+      "duration": 1.1,
+      "action": "shock",
+      "camera": "reaction-closeup"
+    },
+    {
+      "name": "catch",
+      "start": 8.9,
+      "duration": 1.5,
+      "action": "catch",
+      "camera": "composed"
+    },
+    {
+      "name": "stare",
+      "start": 10.4,
+      "duration": 1.5,
+      "action": "stare",
+      "camera": "reaction-closeup"
+    },
+    {
+      "name": "sneak",
+      "start": 11.9,
+      "duration": 1.45,
+      "action": "sneak",
+      "camera": "composed"
+    },
+    {
+      "name": "glare",
+      "start": 13.35,
+      "duration": 1.1,
+      "action": "glare",
+      "camera": "reaction-closeup"
+    },
+    {
+      "name": "chase",
+      "start": 14.45,
+      "duration": 1.6,
+      "action": "chase",
+      "camera": "composed"
+    },
+    {
+      "name": "trip",
+      "start": 16.05,
+      "duration": 1.3,
+      "action": "trip",
+      "camera": "composed"
+    },
+    {
+      "name": "shock",
+      "start": 17.35,
+      "duration": 1.1,
+      "action": "shock",
+      "camera": "reaction-closeup"
+    },
+    {
+      "name": "catch",
+      "start": 18.45,
+      "duration": 1.4,
+      "action": "catch",
+      "camera": "composed"
+    },
+    {
+      "name": "stare",
+      "start": 19.85,
+      "duration": 1.5,
+      "action": "stare",
+      "camera": "reaction-closeup"
+    },
+    {
+      "name": "button",
+      "start": 21.35,
+      "duration": 1.8,
+      "action": "button",
+      "camera": "composed"
+    }
+  ]
+}
