@@ -1,0 +1,92 @@
+name: Official Google Colab CLI - manually authorized
+on:
+  push:
+    branches: [feature/official-colab-cli-automation-20261115]
+    paths: ['colab-studio/official_gpu_probe.py','.github/workflows/official-colab-cli.yml']
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        required: true
+        default: validate
+        options: [validate,check_connection,gpu_probe]
+permissions:
+  contents: read
+jobs:
+  official-colab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    concurrency:
+      group: ${{ github.repository }}-colab
+      cancel-in-progress: false
+    env:
+      MODE: ${{ inputs.mode || 'validate' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install official CLI and check syntax without using Google account
+        run: |
+          python -m py_compile colab-studio/official_gpu_probe.py
+          python -m pip install --no-cache-dir google-colab-cli==0.7.2
+          colab version
+          colab new --help >/dev/null
+          colab exec --help >/dev/null
+          colab download --help >/dev/null
+          echo 'OFFICIAL_COLAB_CLI_INSTALLED: no GPU and no credentials used'
+      - name: Explicit optional Google connection check or GPU trial
+        if: github.event_name == 'workflow_dispatch' && inputs.mode != 'validate'
+        env:
+          COLAB_ADC_JSON: ${{ secrets.COLAB_ADC_JSON }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +x
+          if [ -z "$COLAB_ADC_JSON" ]; then
+            echo 'COLAB_ADC_JSON secret not configured. No Google login attempted.' >&2
+            exit 2
+          fi
+          ADC_FILE="$RUNNER_TEMP/vidbest-google-adc.json"
+          umask 077
+          printf '%s' "$COLAB_ADC_JSON" > "$ADC_FILE"
+          unset COLAB_ADC_JSON
+          python - "$ADC_FILE" <<'PY'
+          import json,sys
+          with open(sys.argv[1]) as f: data=json.load(f)
+          assert data.get('type')=='authorized_user','Expected user OAuth ADC (not service account)'
+          assert data.get('client_id') and data.get('refresh_token'),'Incomplete ADC'
+          print('User ADC file format OK; no tokens displayed')
+          PY
+          export GOOGLE_APPLICATION_CREDENTIALS="$ADC_FILE"
+          SESSION=""
+          cleanup() {
+            if [ -n "$SESSION" ]; then
+              timeout 45 colab --auth=adc stop -s "$SESSION" >/dev/null 2>&1 || true
+            fi
+            rm -f "$ADC_FILE"
+          }
+          trap cleanup EXIT
+          timeout 75 colab --auth=adc sessions > "$RUNNER_TEMP/colab-sessions.txt"
+          echo 'COLAB_AUTHENTICATED: no GPU used for this connection check'
+          if [ "$MODE" = "gpu_probe" ]; then
+            SESSION="vidbest$GITHUB_RUN_ID"
+            mkdir -p colab-studio/output
+            timeout 180 colab --auth=adc new -s "$SESSION" --gpu T4
+            timeout 180 colab --auth=adc exec -s "$SESSION" -f colab-studio/official_gpu_probe.py
+            timeout 90 colab --auth=adc download -s "$SESSION" /content/vidbest_gpu_probe.json colab-studio/output/gpu-proof.json
+            python - <<'PY'
+          import json
+          with open('colab-studio/output/gpu-proof.json') as f: d=json.load(f)
+          assert d['cuda_verified'] and d['ai_video_generated'] is False
+          print('COLAB_GPU_PROBE_VERIFIED; NOT AI video generation')
+          PY
+          fi
+      - name: Upload nonsecret evidence (if any)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: official-colab-cuda-proof
+          path: colab-studio/output/gpu-proof.json
+          if-no-files-found: ignore
+          retention-days: 3
