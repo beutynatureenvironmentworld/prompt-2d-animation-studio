@@ -44,8 +44,20 @@ else:
     shutil.copyfile(available[0],bundle)
 '''
     cells=[cell("markdown","# VidBest GPU shots\nSelect GPU, then Run all. The included CPU episode supplies the reference frames and original sound. Only the selected shot windows are regenerated. Choose ltx, wan or toon below. GPU capacity and model downloads depend on your account. Keep the output before disconnecting."),
-           cell("code",f'MODEL = "{model}"  # ltx, wan, toon\n'),cell("code",code),
-           cell("code",'''subprocess.run([sys.executable, studio/"setup.py", MODEL, "--root", root], check=True)
+           cell("code",f'MODEL = "{model}"  # ltx, wan, toon\nUSE_R2 = False  # Optional notebook secrets for checkpoints\n'),cell("code",code),
+           cell("code",'''if USE_R2:
+    names=("R2_BUCKET","R2_ENDPOINT","AWS_ACCESS_KEY_ID","AWS_SECRET_ACCESS_KEY")
+    if Path("/kaggle/working").exists():
+        from kaggle_secrets import UserSecretsClient
+        fetch=UserSecretsClient().get_secret
+    elif "google.colab" in sys.modules:
+        from google.colab import userdata
+        fetch=userdata.get
+    else:
+        fetch=os.environ.__getitem__
+    for name in names: os.environ[name]=fetch(name)
+    subprocess.run([sys.executable,"-m","pip","install","boto3"],check=True)
+subprocess.run([sys.executable, studio/"setup.py", MODEL, "--root", root], check=True)
 # For persistent output on Colab, set output to a mounted Drive directory.
 subprocess.run([sys.executable, studio/"hybrid.py","gpu", bundle,output/"renders","--root",root,"--model",MODEL],check=True)
 '''),cell("code",'''import hashlib
