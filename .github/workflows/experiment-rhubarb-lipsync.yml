@@ -1,0 +1,58 @@
+name: EXPERIMENT Rhubarb true audio driven 2D lip sync
+on:
+  push:
+    branches: [experiment/iki-blender-prompt-puppet-20261116]
+    paths: ['puppet-lab/rhubarb_lipsync_demo.py', '.github/workflows/experiment-rhubarb-lipsync.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rhubarb-lipsync:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install CPU dependencies and Rhubarb official release
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg espeak-ng unzip
+          python -m pip install --quiet 'Pillow>=10,<12'
+          curl --fail --location --retry 2 --silent --show-error \
+            -o "$RUNNER_TEMP/rhubarb.zip" \
+            https://github.com/DanielSWolf/rhubarb-lip-sync/releases/download/v1.14.0/Rhubarb-Lip-Sync-1.14.0-Linux.zip
+          mkdir -p "$RUNNER_TEMP/rhubarb"
+          unzip -q "$RUNNER_TEMP/rhubarb.zip" -d "$RUNNER_TEMP/rhubarb"
+          find "$RUNNER_TEMP/rhubarb" -type f -name rhubarb -exec chmod +x {} \;
+          find "$RUNNER_TEMP/rhubarb" -type f -name rhubarb -print
+      - name: Create original short speech and actual Rhubarb A-H mouth-cue timeline
+        run: |
+          set -euo pipefail
+          mkdir -p puppet-lab/output/rhubarb
+          espeak-ng -s 150 -p 62 -w puppet-lab/output/rhubarb/original-dialogue.wav "Wait! Where is my cookie?"
+          R="$(find "$RUNNER_TEMP/rhubarb" -type f -name rhubarb | head -1)"
+          test -n "$R"
+          "$R" -f json -o puppet-lab/output/rhubarb/rhubarb-mouth-cues.json puppet-lab/output/rhubarb/original-dialogue.wav
+          python - <<'PY'
+          import json
+          d=json.load(open('puppet-lab/output/rhubarb/rhubarb-mouth-cues.json'))
+          assert len(d['mouthCues'])>=3
+          print('RHUBARB_REAL_AUDIO_CUES_PASS',len(d['mouthCues']),sorted(set(c['value'] for c in d['mouthCues'])))
+          PY
+      - name: Draw 144 independently animated actor frames with true cue-controlled lips
+        run: |
+          python -m py_compile puppet-lab/rhubarb_lipsync_demo.py
+          python -u puppet-lab/rhubarb_lipsync_demo.py
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json puppet-lab/output/rhubarb/rhubarb-original-lipsync.mp4
+      - name: Save genuine audio-driven MP4 and cue evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rhubarb-original-2d-voice-lipsync-demo
+          path: |
+            puppet-lab/output/rhubarb/rhubarb-original-lipsync.mp4
+            puppet-lab/output/rhubarb/original-dialogue.wav
+            puppet-lab/output/rhubarb/rhubarb-mouth-cues.json
+            puppet-lab/output/rhubarb/lip-sync-evidence.json
+          if-no-files-found: warn
+          retention-days: 7
