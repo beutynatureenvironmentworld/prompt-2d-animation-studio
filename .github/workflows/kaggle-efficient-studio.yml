@@ -45,6 +45,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
   gpu-probe:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'gpu-probe-once:')
     needs: cpu-validation
     runs-on: ubuntu-24.04
     timeout-minutes: 12
@@ -71,7 +72,7 @@ jobs:
       - name: Submit only one bounded Kaggle kernel
         if: steps.access.outputs.ready == 'true'
         run: |
-          python -m pip install --disable-pip-version-check --quiet kaggle
+          python -m pip install --disable-pip-version-check --quiet kaggle six
           python kaggle-studio/dispatch.py --username "$KAGGLE_USERNAME" --mode "$GPU_MODE" --minutes "$MAX_MINUTES" --job-id "$GITHUB_RUN_ID" --out /tmp/kaggle-studio-job --submit
           echo 'Job submitted; Kaggle allocation and completion are NOT yet confirmed.'
           python - <<'PY'
