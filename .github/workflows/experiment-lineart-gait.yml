@@ -1,0 +1,62 @@
+name: Experiment lineart IK demo
+on:
+  push:
+    branches: [experiment/iki-blender-prompt-puppet-20261116]
+    paths: ['puppet-lab/lineart_gait.mjs', '.github/workflows/experiment-lineart-gait.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lineart:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install SVG renderer and FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq librsvg2-bin ffmpeg espeak-ng
+      - name: Clone official MIT line-art-animation and generate 144 genuine SVG frames
+        run: |
+          git clone -q --depth 1 https://github.com/JDhruv14/line-art-animation.git "$RUNNER_TEMP/lineart"
+          cp puppet-lab/lineart_gait.mjs "$RUNNER_TEMP/lineart/lineart_gait.mjs"
+          node --experimental-strip-types "$RUNNER_TEMP/lineart/lineart_gait.mjs"
+      - name: Rasterize actual frame art, encode 6s MP4 and original spoken voice
+        run: |
+          set -euo pipefail
+          cd puppet-lab/output/lineart
+          for f in frames/f*.svg; do
+            out="$(dirname "$f")/$(basename "$f" .svg).png"
+            rsvg-convert "$f" -o "$out"
+          done
+          ffmpeg -hide_banner -loglevel error -y -r 24 -start_number 1 -i frames/f%04d.png -c:v libx264 -preset veryfast -pix_fmt yuv420p -crf 21 original-lineart-gait.mp4
+          espeak-ng -s 195 -p 70 -w original-dialogue.wav 'Whoa! Not again!'
+          ffmpeg -hide_banner -loglevel error -y -i original-lineart-gait.mp4 -i original-dialogue.wav -filter_complex '[1:a]adelay=2800:all=1,apad=pad_dur=6[a]' -map 0:v:0 -map '[a]' -c:v copy -c:a aac -t 6 original-lineart-with-voice.mp4
+          test -s original-lineart-with-voice.mp4
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json original-lineart-with-voice.mp4
+      - name: Verify source poses differ and engine results were generated
+        run: |
+          python - <<'PYCHECK'
+          import pathlib,json,hashlib
+          p=pathlib.Path('puppet-lab/output/lineart')
+          d=json.loads((p/'proof.json').read_text())
+          assert d['generated_frames']==144 and d['fps']==24
+          assert hashlib.sha256((p/'frames/f0001.png').read_bytes()).digest()!=hashlib.sha256((p/'frames/f0055.png').read_bytes()).digest()
+          assert (p/'original-lineart-with-voice.mp4').stat().st_size>30000
+          print('REAL_LINEART_IK_144_FRAMES_MP4_PASS')
+          PYCHECK
+      - name: Collect verified original animation artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: original-lineart-ik-animation-6sec-demo
+          path: |
+            puppet-lab/output/lineart/*.mp4
+            puppet-lab/output/lineart/proof.json
+            puppet-lab/output/lineart/frames/f0001.png
+            puppet-lab/output/lineart/frames/f0055.png
+          retention-days: 7
+          if-no-files-found: warn
