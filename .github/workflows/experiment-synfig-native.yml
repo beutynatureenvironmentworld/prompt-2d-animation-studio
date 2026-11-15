@@ -36,7 +36,7 @@ jobs:
           set -euo pipefail
           mkdir -p puppet-lab/output/synfig/frames
           synfig puppet-lab/output/synfig/original-native-synfig-animated-puppet.sif -t png -o puppet-lab/output/synfig/frames/scene.png
-          ls -la puppet-lab/output/synfig/frames | head -12
+          find puppet-lab/output/synfig/frames -maxdepth 1 -name '*.png' -printf '.' | wc -c
           python - <<'PY'
           from pathlib import Path
           p=Path('puppet-lab/output/synfig/frames')
