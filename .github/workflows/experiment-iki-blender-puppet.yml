@@ -38,6 +38,14 @@ jobs:
           CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)" node puppet-lab/iki_trial.mjs
           mkdir -p "$GITHUB_WORKSPACE/puppet-lab/output"
           cp -r puppet-test-output "$GITHUB_WORKSPACE/puppet-lab/output/iki"
+      - name: Create actual short moving Iki WebGL facial motion MP4
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install --quiet 'Pillow>=10,<12'
+          python -m py_compile puppet-lab/iki_pose_video.py
+          python -u puppet-lab/iki_pose_video.py
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json puppet-lab/output/iki/iki-face-motion-and-cartoon-body.mp4
       - name: Upload validated Iki file and genuine pose PNGs
         if: always()
         uses: actions/upload-artifact@v4
