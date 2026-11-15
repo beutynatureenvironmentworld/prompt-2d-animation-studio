@@ -1,0 +1,128 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "first.png"
+    }
+  },
+  "2": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "last.png"
+    }
+  },
+  "3": {
+    "class_type": "ImageBatch",
+    "inputs": {
+      "image1": [
+        "1",
+        0
+      ],
+      "image2": [
+        "2",
+        0
+      ]
+    }
+  },
+  "4": {
+    "class_type": "DownloadAndLoadDynamiCrafterModel",
+    "inputs": {
+      "model": "tooncrafter_512_interp-pruned-fp16.safetensors",
+      "dtype": "auto",
+      "fp8_unet": false
+    }
+  },
+  "5": {
+    "class_type": "DownloadAndLoadCLIPModel",
+    "inputs": {
+      "model": "stable-diffusion-2-1-clip-fp16.safetensors"
+    }
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "Motion prompt",
+      "clip": [
+        "5",
+        0
+      ]
+    }
+  },
+  "7": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "extra arms, melting, blur",
+      "clip": [
+        "5",
+        0
+      ]
+    }
+  },
+  "9": {
+    "class_type": "DownloadAndLoadCLIPVisionModel",
+    "inputs": {
+      "model": "CLIP-ViT-H-fp16.safetensors"
+    }
+  },
+  "10": {
+    "class_type": "ToonCrafterInterpolation",
+    "inputs": {
+      "model": [
+        "4",
+        0
+      ],
+      "clip_vision": [
+        "9",
+        0
+      ],
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "images": [
+        "3",
+        0
+      ],
+      "steps": 20,
+      "cfg": 7,
+      "eta": 1,
+      "frames": 16,
+      "seed": 42,
+      "fs": 10,
+      "vae_dtype": "auto"
+    }
+  },
+  "11": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "vae-ft-mse-840000-ema-pruned.safetensors"
+    }
+  },
+  "8": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "10",
+        0
+      ],
+      "vae": [
+        "11",
+        0
+      ]
+    }
+  },
+  "99": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "8",
+        0
+      ],
+      "filename_prefix": "vidbest"
+    }
+  }
+}
