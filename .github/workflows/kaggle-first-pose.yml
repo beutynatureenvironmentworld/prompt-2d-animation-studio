@@ -1,0 +1,33 @@
+name: First real AI cartoon pose on Kaggle T4
+on:
+  push:
+    branches: [feature/kaggle-30h-efficient-studio]
+    paths: ['.github/workflows/kaggle-first-pose.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  private-pose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require authenticated private Kaggle account
+        run: |
+          test -n "$KAGGLE_API_TOKEN" && test -n "$KAGGLE_USERNAME" || {
+            echo "Kaggle credential fields missing. No job submitted." >&2
+            exit 2
+          }
+      - name: Submit ONE 18-minute GPU-bound original cartoon pose generation
+        run: |
+          python -m pip install --quiet kaggle six
+          python kaggle-studio/dispatch.py --username "$KAGGLE_USERNAME" --mode pose-ai \
+            --minutes 18 --job-id "$GITHUB_RUN_ID" --out /tmp/kaggle-pose-trial --submit
+          echo 'Only submission is confirmed. Kaggle model download/inference happens privately on the GPU.'
+          echo 'Model weight license: CreativeML OpenRAIL-M; no paid API or R2 used.'

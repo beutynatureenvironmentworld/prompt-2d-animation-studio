@@ -1,0 +1,56 @@
+name: Original 23-second funny 2D video and two-shot GPU handoff
+on:
+  push:
+    branches: [feature/kaggle-30h-efficient-studio]
+    paths:
+      - 'kaggle-studio/examples/**'
+      - '.github/workflows/kaggle-comedy-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install only CPU renderer components
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg python3-cairo
+      - name: Render 23s original portrait comedy at 24fps
+        run: |
+          mkdir -p output
+          /usr/bin/python3 snap2d/rapid_cartoon.py \
+            --storyboard kaggle-studio/examples/original_23s_comedy.json \
+            --output output/original-23s-silent.mp4 \
+            --preview output/comedy-preview.png
+          test -s output/original-23s-silent.mp4
+          ffprobe -v error -show_entries stream=codec_name,codec_type,width,height,r_frame_rate -of json output/original-23s-silent.mp4 > output/video-specs.json
+      - name: Select only two motion shots and make portable model handoff
+        run: |
+          /usr/bin/python3 kaggle-studio/shot_budget.py \
+            kaggle-studio/examples/original_23s_comedy.json \
+            --out output/gpu-only-two-shots.json
+          /usr/bin/python3 hybrid-gpu/hybrid.py pack \
+            output/original-23s-silent.mp4 output/gpu-only-two-shots.json output/gpu-handoff-bundle.zip
+          /usr/bin/python3 hybrid-gpu/orchestrator.py \
+            output/gpu-handoff-bundle.zip output/renders --model ltx
+          find output/renders -name interactive.ipynb -type f -exec cp '{}' output/optional-ltx-gpu-notebook.ipynb ';'
+          find output/renders -name episode.mp4 -type f -exec cp '{}' output/cpu-safe-fallback.mp4 ';'
+          test -s output/gpu-handoff-bundle.zip
+          test -s output/cpu-safe-fallback.mp4
+          test -s output/optional-ltx-gpu-notebook.ipynb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: original-funny-23s-and-gpu-hero-shots
+          path: |
+            output/original-23s-silent.mp4
+            output/cpu-safe-fallback.mp4
+            output/comedy-preview.png
+            output/gpu-only-two-shots.json
+            output/gpu-handoff-bundle.zip
+            output/optional-ltx-gpu-notebook.ipynb
+            output/video-specs.json
+          retention-days: 7
+          if-no-files-found: error
