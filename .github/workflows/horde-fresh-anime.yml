@@ -1,8 +1,5 @@
 name: AI Horde REAL fresh anime cartoon frames and short animated preview
 on:
-  push:
-    branches: [feature/real-horde-funny-anime-fallback]
-    paths: ['horde-studio/**','.github/workflows/horde-fresh-anime.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -26,6 +23,10 @@ jobs:
           python -m py_compile horde-studio/horde_generate.py horde-studio/render_horde_story.py
       - name: Real volunteer GPU model generation on AI Horde
         run: python -u horde-studio/horde_generate.py
+      - name: Install required FFmpeg renderer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
       - name: Cut genuinely new AI images into a 9-second moving preview
         run: python -u horde-studio/render_horde_story.py
       - name: Verify MP4 and honest provenance
