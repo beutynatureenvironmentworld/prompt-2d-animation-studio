@@ -36,6 +36,7 @@ jobs:
         run: |
           cd "$RUNNER_TEMP/iki"
           CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)" node puppet-lab/iki_trial.mjs
+          mkdir -p "$GITHUB_WORKSPACE/puppet-lab/output"
           cp -r puppet-test-output "$GITHUB_WORKSPACE/puppet-lab/output/iki"
       - name: Upload validated Iki file and genuine pose PNGs
         if: always()
@@ -48,6 +49,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
   blender-new-2d-armature:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[blender]')
     runs-on: ubuntu-24.04
     timeout-minutes: 19
     steps:
