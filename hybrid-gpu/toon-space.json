@@ -1,0 +1,17 @@
+{
+  "space": "Doubiiu/tooncrafter",
+  "api_name": "/get_image",
+  "inputs": {
+    "image": "$first",
+    "image2": "$last",
+    "prompt": "$prompt",
+    "steps": 20,
+    "cfg_scale": 7.5,
+    "eta": 1,
+    "fs": 10,
+    "seed": "$seed"
+  },
+  "output_path": [
+    "video"
+  ]
+}
