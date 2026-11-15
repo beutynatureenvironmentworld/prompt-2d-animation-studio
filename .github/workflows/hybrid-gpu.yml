@@ -1,34 +1,87 @@
-name: Hybrid video GPU
+name: Hybrid video GPU - prepare safely or submit private Kaggle notebook
 on:
+  push:
+    branches: [feature/hybrid-gpu-kaggle-dispatch-20261115]
+    paths:
+      - '.github/workflows/hybrid-gpu.yml'
   workflow_dispatch:
     inputs:
+      mode:
+        description: Prepare a downloadable CPU+GPU handoff, or explicitly submit to Kaggle
+        type: choice
+        options: [prepare, submit]
+        default: prepare
+        required: true
       model:
+        description: GPU model to attempt on your authorized notebook
         type: choice
         options: [ltx, wan, toon]
+        default: ltx
         required: true
       bundle:
-        description: Trial notebook or prepared episode ZIP in this repository
-        default: hybrid-gpu/Start_Here.ipynb
+        description: Use auto to build the CPU episode and bundle, or path to existing project-local ZIP
+        default: auto
         required: true
 permissions:
   contents: read
 jobs:
   kaggle:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
+    env:
+      INPUT_MODE: ${{ inputs.mode || 'prepare' }}
+      INPUT_MODEL: ${{ inputs.model || 'ltx' }}
+      INPUT_BUNDLE: ${{ inputs.bundle || 'auto' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Dispatch private Kaggle GPU notebook
+      - name: Validate dispatch selection without using secrets
+        run: |
+          case "$INPUT_MODE" in prepare|submit) ;; *) exit 2;; esac
+          case "$INPUT_MODEL" in ltx|wan|toon) ;; *) exit 2;; esac
+          if [ "$INPUT_BUNDLE" != auto ]; then
+            resolved="$(realpath -e -- "$INPUT_BUNDLE")"
+            case "$resolved" in "$GITHUB_WORKSPACE"/*.zip) ;; *) echo 'Only a repository-local ZIP is allowed' >&2; exit 2;; esac
+            echo "BUNDLE_PATH=$resolved" >> "$GITHUB_ENV"
+          fi
+      - name: Install CPU components for safe auto bundle
+        if: env.INPUT_BUNDLE == 'auto'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends python3-cairo ffmpeg
+          /usr/bin/python3 -m unittest discover -s snap2d/tests -q
+      - name: Build playable CPU cartoon and embedded GPU submission bundle
+        if: env.INPUT_BUNDLE == 'auto'
+        run: |
+          python3 hybrid-gpu/cpu_handoff_smoke.py --model "$INPUT_MODEL" --output handoff-test
+          test -s handoff-test/gpu-handoff-bundle.zip
+          test -s handoff-test/watch-me-silent.mp4
+          echo "BUNDLE_PATH=$GITHUB_WORKSPACE/handoff-test/gpu-handoff-bundle.zip" >> "$GITHUB_ENV"
+      - name: Upload ready-to-use, no-secret CPU MP4 and notebook
+        if: env.INPUT_BUNDLE == 'auto'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kaggle-handoff-and-cpu-video
+          path: |
+            handoff-test/watch-me-silent.mp4
+            handoff-test/editable-cartoon-storyboard.json
+            handoff-test/gpu-handoff-bundle.zip
+            handoff-test/gpu-trial-notebook.ipynb
+            handoff-test/test-result.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: Explicitly submit private Kaggle job (only when selected)
+        if: env.INPUT_MODE == 'submit'
         env:
           KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
           OWNER: ${{ vars.KAGGLE_USERNAME }}
-          BUNDLE: ${{ inputs.bundle }}
-          MODEL: ${{ inputs.model }}
         run: |
-          test -n "$KAGGLE_API_TOKEN" && test -n "$OWNER" || { echo 'Configure KAGGLE_API_TOKEN and KAGGLE_USERNAME in this repository first.'; exit 1; }
-          case "$(realpath -e -- "$BUNDLE")" in "$GITHUB_WORKSPACE"/*.zip|"$GITHUB_WORKSPACE"/hybrid-gpu/Start_Here.ipynb) ;; *) exit 1;; esac
-          pip install kaggle
-          python hybrid-gpu/kaggle_job.py "$BUNDLE" "$OWNER" --model "$MODEL"
+          if [ -z "$KAGGLE_API_TOKEN" ] || [ -z "$OWNER" ]; then
+            echo 'Add KAGGLE_API_TOKEN repository secret and KAGGLE_USERNAME repository variable first.' >&2
+            exit 1
+          fi
+          python3 -m pip install --disable-pip-version-check kaggle
+          python3 hybrid-gpu/kaggle_job.py "$BUNDLE_PATH" "$OWNER" --model "$INPUT_MODEL"
+          echo 'Kaggle submission attempted. Check the printed notebook ID/status in your own Kaggle account.'
