@@ -15,12 +15,12 @@ LIBRARY={
  "bounce":{"duration":1.1,"poses":["squash","stretch","recover"],"loop":False}
 }
 WORDS={
- "run":["run","running","rush","chase","sprint"],
- "knock":["knock","knocking","tap","door"],
- "shock":["surprise","shock","scared","fear","startle"],
- "talk":["talk","speak","say","shout","whoa","hello"],
- "slip":["slip","trip","banana","fall"],
- "bounce":["bounce","rebound","recover","spring"]
+ "run":["run","runs","running","rush","chase","sprint"],
+ "knock":["knock","knocks","knocking","tap","door"],
+ "shock":["surprise","shock","shocked","scared","fear","startle"],
+ "talk":["talk","talks","speak","speaks","say","says","shout","whoa","hello"],
+ "slip":["slip","slips","trip","trips","banana","fall","falls"],
+ "bounce":["bounce","bounces","rebound","recover","spring"]
 }
 def build(prompt):
     if not isinstance(prompt,str) or not 3<=len(prompt)<=500:
