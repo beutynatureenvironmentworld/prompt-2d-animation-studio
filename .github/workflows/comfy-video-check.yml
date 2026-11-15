@@ -1,0 +1,39 @@
+name: Check ComfyUI video backends
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/comfy-video-check.yml', 'hybrid-gpu/*-api.json']
+permissions:
+  contents: read
+jobs:
+  nodes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          python hybrid-gpu/setup.py toon --sources-only --root /tmp/VidBestComfy
+          pip install torch torchaudio torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install -r /tmp/VidBestComfy/requirements.txt -r /tmp/VidBestComfy/custom_nodes/DynamiCrafterWrapper/requirements.txt
+          python /tmp/VidBestComfy/main.py --cpu --listen 127.0.0.1 > /tmp/vidbest-comfy.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" || true' EXIT
+          for n in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:8188/object_info > /tmp/nodes.json 2>/dev/null; then break; fi
+            if ! kill -0 "$pid"; then tail -60 /tmp/vidbest-comfy.log; exit 1; fi
+            sleep 2
+          done
+          python - <<'PY'
+          import json, pathlib
+          catalog=json.load(open('/tmp/nodes.json'))
+          for path in pathlib.Path('hybrid-gpu').glob('*-api.json'):
+              graph=json.loads(path.read_text())
+              for node in graph.values():
+                  schema=catalog[node['class_type']]['input']
+                  missing=set(schema.get('required',{}))-node['inputs'].keys()
+                  if missing: raise ValueError((path,node['class_type'],missing))
+              print(path, 'all node types and required inputs registered')
+          PY
