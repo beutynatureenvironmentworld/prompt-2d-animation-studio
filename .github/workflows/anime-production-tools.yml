@@ -1,0 +1,73 @@
+name: Install and RUN advanced original 2D anime production tools
+on:
+  push:
+    branches: [feature/rigged-2d-action-anime-upgrade]
+    paths: ['anime-stack/**','.github/workflows/anime-production-tools.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  actual-toolchain:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender, Synfig, speech synthesis, FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq blender synfig espeak-ng ffmpeg
+          blender --version | head -3
+          synfig --version | head -5
+          espeak-ng --version
+          ffmpeg -version | head -1
+      - name: Run actual headless Blender 2D scene creation and PNG render
+        run: |
+          blender -b --factory-startup --python anime-stack/blender_2d_probe.py
+      - name: Download and run original voice-to-viseme Rhubarb Lip Sync
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 2 -o "$RUNNER_TEMP/rhubarb.zip" 'https://github.com/DanielSWolf/rhubarb-lip-sync/releases/download/v1.14.0/Rhubarb-Lip-Sync-1.14.0-Linux.zip'
+          mkdir -p "$RUNNER_TEMP/rhubarb"
+          unzip -q "$RUNNER_TEMP/rhubarb.zip" -d "$RUNNER_TEMP/rhubarb"
+          binary="$(find "$RUNNER_TEMP/rhubarb" -type f -name rhubarb -print -quit)"
+          test -n "$binary"
+          chmod +x "$binary"
+          "$binary" --version
+          mkdir -p anime-stack/output
+          espeak-ng -s 170 -w anime-stack/output/own-funny-dialogue.wav 'Hey! That cookie is mine! Whoa! Nice hat!'
+          "$binary" -f json -o anime-stack/output/own-lip-visemes.json anime-stack/output/own-funny-dialogue.wav
+          python - <<'PY'
+          import json
+          d=json.load(open("anime-stack/output/own-lip-visemes.json"))
+          n=len(d.get("mouthCues",[]))
+          assert n>3
+          print("RHUBARB_REAL_AUDIO_TO_MOUTH_CUES_PASS",n)
+          PY
+      - name: Check official AI animation sources WITHOUT huge model downloads
+        run: |
+          set -e
+          mkdir -p "$RUNNER_TEMP/optional-model-sources"
+          git clone -q --depth 1 https://github.com/Lightricks/LTX-Video.git "$RUNNER_TEMP/optional-model-sources/LTX-Video"
+          git clone -q --depth 1 https://github.com/comfyanonymous/ComfyUI.git "$RUNNER_TEMP/optional-model-sources/ComfyUI"
+          git clone -q --depth 1 https://github.com/Wan-Video/Wan2.1.git "$RUNNER_TEMP/optional-model-sources/Wan2.1"
+          git clone -q --depth 1 https://github.com/TencentARC/ToonCrafter.git "$RUNNER_TEMP/optional-model-sources/ToonCrafter"
+          for model in LTX-Video ComfyUI Wan2.1 ToonCrafter; do
+            test -s "$RUNNER_TEMP/optional-model-sources/$model/README.md" || test -s "$RUNNER_TEMP/optional-model-sources/$model/readme.md"
+            echo "SOURCE_CHECKED_OUT_$model (NO MODEL WEIGHTS NOR GPU INFERENCE)"
+          done
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("anime-stack/output/model-source-status.txt")
+          p.write_text("Checked out official source only: LTX-Video, ComfyUI, Wan2.1, ToonCrafter\n"
+                       "Models checkpoint weights were not downloaded, installed or inferred on CPU Actions runner.\n"
+                       "Actual diffusion on Kaggle requires CUDA GPU allocation and VRAM-compatible models.\n")
+          PY
+      - name: Collect proof of installed and executed 2D technologies
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Blender-Synfig-Rhubarb-AI-Sources-Verified
+          path: |
+            anime-stack/output/
+          retention-days: 7
+          if-no-files-found: warn
