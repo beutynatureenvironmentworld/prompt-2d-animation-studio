@@ -1,0 +1,87 @@
+name: Kaggle efficient 2D studio - CPU tests and bounded GPU probe
+on:
+  push:
+    branches: [feature/kaggle-30h-efficient-studio]
+    paths:
+      - 'kaggle-studio/**'
+      - '.github/workflows/kaggle-efficient-studio.yml'
+  workflow_dispatch:
+    inputs:
+      gpu_mode:
+        description: Probe GPU only; pose-ai downloads SD1.5 and generates one new illustration
+        type: choice
+        options: [probe, pose-ai]
+        required: true
+        default: probe
+      max_minutes:
+        description: Hard Kaggle kernel timeout in minutes (2-30)
+        type: choice
+        options: ['8', '15', '25']
+        required: true
+        default: '8'
+permissions:
+  contents: read
+jobs:
+  cpu-validation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate Kaggle job builder and scarce-GPU shot policy
+        run: |
+          python -m compileall -q kaggle-studio
+          python -m unittest discover -s kaggle-studio -p 'test_*.py' -v
+          python kaggle-studio/shot_budget.py snap2d/examples/storyboard_cookie.json --out selected-gpu-shots.json
+          python kaggle-studio/dispatch.py --username validationonly --mode probe --minutes 8 --job-id dryrun --out /tmp/validated-kaggle-job
+          python -m json.tool /tmp/validated-kaggle-job/kernel-metadata.json >/dev/null
+          python -m py_compile /tmp/validated-kaggle-job/gpu_job.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cpu-optimized-gpu-shot-plan
+          path: selected-gpu-shots.json
+          if-no-files-found: error
+          retention-days: 7
+  gpu-probe:
+    needs: cpu-validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+      GPU_MODE: ${{ inputs.gpu_mode || 'probe' }}
+      MAX_MINUTES: ${{ inputs.max_minutes || '8' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Respect account and access boundaries
+        id: access
+        run: |
+          if [ -z "$KAGGLE_API_TOKEN" ] || [ -z "$KAGGLE_USERNAME" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo 'Kaggle access not configured: set repo variable KAGGLE_USERNAME and secret KAGGLE_API_TOKEN. No GPU quota spent.'
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo 'Kaggle connection fields present. Submitting one short PRIVATE GPU job.'
+          fi
+      - name: Submit only one bounded Kaggle kernel
+        if: steps.access.outputs.ready == 'true'
+        run: |
+          python -m pip install --disable-pip-version-check --quiet kaggle
+          python kaggle-studio/dispatch.py --username "$KAGGLE_USERNAME" --mode "$GPU_MODE" --minutes "$MAX_MINUTES" --job-id "$GITHUB_RUN_ID" --out /tmp/kaggle-studio-job --submit
+          echo 'Job submitted; Kaggle allocation and completion are NOT yet confirmed.'
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          m=json.loads(Path('/tmp/kaggle-studio-job/kernel-metadata.json').read_text())
+          print('View private Kaggle notebook: https://www.kaggle.com/code/'+m['id'])
+          PY
+      - name: Display selected future commands
+        if: steps.access.outputs.ready == 'true'
+        run: |
+          echo 'View the private job in your Kaggle Notebooks list.'
+          echo 'Download images or gpu-studio-result.json only when Kaggle reports completion.'
