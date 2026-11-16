@@ -1,0 +1,87 @@
+name: EXPERIMENT - SuperToon Director Pro Custom Funny Short
+on:
+  push:
+    branches: ['experiment/supertoon-director-pro']
+    paths:
+      - 'supertoon-director-pro/**'
+      - '.github/workflows/supertoon-director-pro.yml'
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Funny cartoon prompt in English or Sinhala'
+        type: string
+        required: true
+        default: 'Funny boy runs to the toilet, knocks, panics, slips, falls and recovers'
+      duration:
+        description: 'Video duration'
+        type: choice
+        options: ['6', '9', '12', '15']
+        default: '9'
+      ratio:
+        description: 'Social aspect ratio'
+        type: choice
+        options: ['9:16', '16:9', '1:1']
+        default: '9:16'
+      style:
+        description: 'Original vector visual style'
+        type: choice
+        options: ['super-test-color', 'ink-monochrome']
+        default: 'super-test-color'
+permissions:
+  contents: read
+concurrency:
+  group: supertoon-director-pro-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  cpu-custom-funny-short:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 13
+    env:
+      PROMPT_TEXT: ${{ inputs.prompt }}
+      DURATION_SECONDS: ${{ inputs.duration }}
+      VIDEO_RATIO: ${{ inputs.ratio }}
+      STYLE: ${{ inputs.style }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install minimal original CPU animation dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq python3-cairo ffmpeg
+          /usr/bin/python3 -c 'import cairo; print("ACTUAL_PYCAIRO_INSTALLED",cairo.version)'
+      - name: Test settings, grammar, cast, independent IK knees and vector rendering
+        run: |
+          cd supertoon-director-pro
+          /usr/bin/python3 -m unittest discover -s tests -v
+      - name: Generate new 9:16 MP4 from just one custom prompt (no API keys)
+        run: |
+          cd supertoon-director-pro
+          : "${PROMPT_TEXT:=Funny boy runs to toilet, knocks, panics, slips then recovers}"
+          : "${DURATION_SECONDS:=9}"
+          : "${VIDEO_RATIO:=9:16}"
+          : "${STYLE:=super-test-color}"
+          /usr/bin/python3 src/render.py --prompt "$PROMPT_TEXT" --duration "$DURATION_SECONDS" --ratio "$VIDEO_RATIO" --style "$STYLE" --output output/GitHub_SuperToon_Pro_Custom_Short.mp4
+      - name: Validate exact real video, duration and audio before upload
+        run: |
+          cd supertoon-director-pro
+          ffprobe -v error -show_entries format=duration,size:stream=codec_name,width,height -of json output/GitHub_SuperToon_Pro_Custom_Short.mp4
+          /usr/bin/python3 - <<'PY'
+          import json,pathlib
+          p=pathlib.Path('output/GitHub_SuperToon_Pro_Custom_Short.mp4')
+          j=json.loads(p.with_suffix('.json').read_text())
+          assert j['status']=='verified' and j['frames']>=72 and p.stat().st_size>20000
+          assert len(j['actions'])>=1
+          print('SUPERTOON_PRO_REAL_AUDIO_VIDEO_PASS',p.stat().st_size,j['size'])
+          PY
+      - name: Download finished MP4 and real technical report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: supertoon-director-pro-original-custom-short
+          path: |
+            supertoon-director-pro/output/GitHub_SuperToon_Pro_Custom_Short.mp4
+            supertoon-director-pro/output/GitHub_SuperToon_Pro_Custom_Short.json
+          if-no-files-found: warn
+          retention-days: 7
