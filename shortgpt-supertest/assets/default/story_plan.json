@@ -1,0 +1,39 @@
+{
+  "scenes": [
+    {
+      "action": "notice",
+      "location": "toilet",
+      "duration": 1.25,
+      "narration": "Oh no. Where's the bathroom?",
+      "image_prompt": "Warm stylized 2D bathroom hallway, white door on the right, wide shot, no people"
+    },
+    {
+      "action": "run",
+      "location": "toilet",
+      "duration": 2.6,
+      "narration": "I've got to make it!",
+      "image_prompt": "Same warm bathroom hallway, clear door on right, empty environment"
+    },
+    {
+      "action": "knock",
+      "location": "toilet",
+      "duration": 2.35,
+      "narration": "Hello? Anybody in there?",
+      "image_prompt": "Same hallway, large wooden bathroom door on right, empty scene"
+    },
+    {
+      "action": "shock",
+      "location": "toilet",
+      "duration": 1.65,
+      "narration": "It's locked!",
+      "image_prompt": "Same hallway, closed bathroom door, no characters"
+    },
+    {
+      "action": "recover",
+      "location": "toilet",
+      "duration": 1.45,
+      "narration": "Well. I'll wait.",
+      "image_prompt": "Same bathroom hallway, calm lighting, no people"
+    }
+  ]
+}

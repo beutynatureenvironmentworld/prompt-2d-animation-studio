@@ -1,0 +1,13 @@
+{
+  "character": {
+    "shirt": "#4a9dba",
+    "skin": "#f4c5a2",
+    "hair": "#272e38",
+    "pants": "#1f2732",
+    "shoes": "#232b37"
+  },
+  "layout": {
+    "door_x": 0.73,
+    "start_x": 0.18
+  }
+}

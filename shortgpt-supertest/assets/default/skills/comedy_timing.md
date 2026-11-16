@@ -1,0 +1,1 @@
+COMEDY ACTING: one readable action at a time. Start with brief anticipation. Show the full stride before a punchline. Knock: hand must reach the door, make contact and recoil. Hold surprise face long enough to read on a phone. Leave a small recovery beat at the end. Do not replace acting with random zoom effects.

@@ -1,0 +1,1 @@
+VISUAL CONTINUITY: one hero identity and outfit, one stable background per location. Reuse the same door position in successive shots. No extra AI-painted person in backgrounds. Motion must travel toward the target: a running cycle that stays at one x coordinate is not real spatial movement.

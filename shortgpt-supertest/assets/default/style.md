@@ -1,0 +1,1 @@
+Original expressive 2D cel-shaded comedy for vertical Shorts and TikTok. Clean thick ink outlines, unified muted blue and warm gold palette. Clear door shapes, believable spatial layout, one foreground character only, no duplicate faces, no words or logos in AI-generated background images. Preserve consistent lighting across shots.

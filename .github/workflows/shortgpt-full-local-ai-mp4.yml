@@ -7,6 +7,24 @@ on:
         required: true
         type: string
         default: 'A funny boy desperately runs to a locked toilet door, knocks, gets shocked and recovers'
+      asset_profile:
+        description: 'Folder within shortgpt-supertest/assets, e.g. default or mycartoon'
+        type: string
+        default: 'default'
+      background_mode:
+        description: 'cpu = SSD-1B AI image generation; assets = uploaded images, procedural fallback'
+        type: choice
+        options: ['cpu', 'assets']
+        default: 'cpu'
+      use_story_plan:
+        description: 'Use assets/<profile>/story_plan.json instead of running Qwen3'
+        type: boolean
+        default: false
+      pacing:
+        description: 'readable = allow proper setup, clear reactions, more voice time; original = raw model timing'
+        type: choice
+        options: ['readable', 'original']
+        default: 'readable'
       image_steps:
         description: 'SSD-1B generation quality vs CPU speed (9=quick, 14=balanced, 20=high)'
         type: choice
@@ -22,6 +40,10 @@ jobs:
       HF_HUB_DISABLE_TELEMETRY: '1'
       CPU_IMAGE_STEPS: ${{ inputs.image_steps }}
       COMEDY_PROMPT: ${{ inputs.prompt }}
+      ASSET_PROFILE: ${{ inputs.asset_profile }}
+      BACKGROUND_MODE: ${{ inputs.background_mode }}
+      USE_STORY_PLAN: ${{ inputs.use_story_plan }}
+      PACING: ${{ inputs.pacing }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -43,22 +65,37 @@ jobs:
           cd shortgpt-supertest
           if [ -z "$COMEDY_PROMPT" ]; then COMEDY_PROMPT='A funny boy desperately runs to a locked toilet door, knocks, gets shocked and recovers'; fi
           python -m unittest discover -s tests -v
-          python shortgpt_supertest.py \
-            --prompt "$COMEDY_PROMPT" \
-            --planner gguf --images cpu --tts espeak \
-            --output output/ShortGPT_Original_Full_OpenWeights_AI.mp4
+          ASSET_PROFILE="${ASSET_PROFILE:-default}"
+          [[ "$ASSET_PROFILE" =~ ^[A-Za-z0-9_-]{1,40}$ ]] || { echo 'Invalid asset_profile name'; exit 2; }
+          ASSET_ROOT="assets/$ASSET_PROFILE"
+          test -d "$ASSET_ROOT" || { echo "Asset profile missing: $ASSET_ROOT"; exit 2; }
+          BACKGROUND_MODE="${BACKGROUND_MODE:-cpu}"
+          case "$BACKGROUND_MODE" in cpu|assets) ;; *) echo 'Invalid background mode'; exit 2 ;; esac
+          CMD=(python shortgpt_supertest.py --prompt "$COMEDY_PROMPT" --planner gguf
+               --images "$BACKGROUND_MODE" --tts espeak
+               --assets-dir "$ASSET_ROOT" --pacing "${PACING:-readable}"
+               --output output/ShortGPT_Original_Full_OpenWeights_AI.mp4)
+          if [ "${USE_STORY_PLAN:-false}" = 'true' ]; then
+            test -f "$ASSET_ROOT/story_plan.json" || { echo 'Requested story_plan.json missing'; exit 2; }
+            CMD+=(--story-plan "$ASSET_ROOT/story_plan.json")
+          fi
+          "${CMD[@]}"
           ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json output/ShortGPT_Original_Full_OpenWeights_AI.mp4
       - name: Strictly verify provenance and audio/video properties
         run: |
           python - <<'PY'
-          import json,subprocess
+          import json,subprocess,os
           from pathlib import Path
           p=Path('shortgpt-supertest/output/ShortGPT_Original_Full_OpenWeights_AI.mp4')
           m=json.load(open(p.with_suffix('.json')))
           streams=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries','stream=codec_name','-of','json',str(p)]))
           codes={x['codec_name'] for x in streams['streams']}
-          assert m['planner']=='gguf' and m['image_backend']=='cpu',m
-          assert m['ai_generated_images']>=1 and m['shortgpt_upstream_engine_executed'] is False
+          mode=os.environ.get('BACKGROUND_MODE') or 'cpu'
+          assert m['planner']=='gguf' and m['image_backend']==mode,m
+          assert m['asset_profile']['memory_documents'], 'Creative memory was not loaded'
+          assert m['pacing'] in ('readable','original')
+          if mode=='cpu':assert m['ai_generated_images']>=1, 'SSD-1B image inference missing'
+          assert m['shortgpt_upstream_engine_executed'] is False
           assert m['actual_mp4'] is True and {'h264','aac'}<=codes
           assert p.stat().st_size>10000
           print('FULL_SHORTGPT_REAL_LOCAL_LLM_DIFFUSION_TTS_MP4_PASS',m['ai_generated_images'],m['duration_requested'],'seconds',p.stat().st_size,'bytes')
