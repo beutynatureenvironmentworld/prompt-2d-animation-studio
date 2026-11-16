@@ -10,6 +10,11 @@ on:
         type: string
         required: true
         default: 'Funny kid runs to the toilet and knocks, gets shocked, recovers'
+      planner_mode:
+        description: 'Story planner: offline or HF hosted LLM (may consume credits)'
+        type: choice
+        options: [offline, hf]
+        default: offline
       ai_image_test:
         description: 'Use Hugging Face AI images (requires credits and Secrets HF_TOKEN and HF_IMAGE_MODEL)'
         type: boolean
@@ -23,8 +28,10 @@ jobs:
     env:
       USER_PROMPT: ${{ inputs.prompt }}
       RUN_AI_IMAGES: ${{ inputs.ai_image_test }}
+      PLANNER_MODE: ${{ inputs.planner_mode }}
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
       HF_IMAGE_MODEL: ${{ vars.HF_IMAGE_MODEL }}
+      HF_CHAT_MODEL: ${{ vars.HF_CHAT_MODEL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -55,12 +62,16 @@ jobs:
           cd shortgpt-supertest
           python -m unittest discover -s tests -v
           if [ -z "$USER_PROMPT" ]; then USER_PROMPT='Funny kid runs to the toilet and knocks, gets shocked, recovers'; fi
-          if [ "$RUN_AI_IMAGES" = "true" ]; then
-            if [ -z "$HF_TOKEN" ] || [ -z "$HF_IMAGE_MODEL" ]; then echo 'Missing HF_TOKEN or HF_IMAGE_MODEL (safe fail)'; exit 2; fi
-            python shortgpt_supertest.py --prompt "$USER_PROMPT" --planner offline --images hf --tts espeak --output output/shortgpt-ai-short.mp4
-          else
-            python shortgpt_supertest.py --prompt "$USER_PROMPT" --planner offline --images procedural --tts espeak --output output/shortgpt-cpu-demo.mp4
+          if [ -z "$PLANNER_MODE" ]; then PLANNER_MODE=offline; fi
+          if [ "$PLANNER_MODE" = "hf" ]; then
+            if [ -z "$HF_TOKEN" ] || [ -z "$HF_CHAT_MODEL" ]; then echo 'Missing HF_TOKEN or HF_CHAT_MODEL'; exit 2; fi
           fi
+          IMAGE_MODE=procedural
+          if [ "$RUN_AI_IMAGES" = "true" ]; then
+            if [ -z "$HF_TOKEN" ] || [ -z "$HF_IMAGE_MODEL" ]; then echo 'Missing HF_TOKEN or HF_IMAGE_MODEL'; exit 2; fi
+            IMAGE_MODE=hf
+          fi
+          python shortgpt_supertest.py --prompt "$USER_PROMPT" --planner "$PLANNER_MODE" --images "$IMAGE_MODE" --tts espeak --output output/shortgpt-cpu-demo.mp4
           ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json output/*.mp4
       - uses: actions/upload-artifact@v4
         if: always()
