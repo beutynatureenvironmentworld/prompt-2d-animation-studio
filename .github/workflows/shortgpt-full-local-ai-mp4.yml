@@ -20,6 +20,11 @@ on:
         description: 'Use assets/<profile>/story_plan.json instead of running Qwen3'
         type: boolean
         default: false
+      pacing:
+        description: 'readable = allow proper setup, clear reactions, more voice time; original = raw model timing'
+        type: choice
+        options: ['readable', 'original']
+        default: 'readable'
       image_steps:
         description: 'SSD-1B generation quality vs CPU speed (9=quick, 14=balanced, 20=high)'
         type: choice
@@ -38,6 +43,7 @@ jobs:
       ASSET_PROFILE: ${{ inputs.asset_profile }}
       BACKGROUND_MODE: ${{ inputs.background_mode }}
       USE_STORY_PLAN: ${{ inputs.use_story_plan }}
+      PACING: ${{ inputs.pacing }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -67,7 +73,7 @@ jobs:
           case "$BACKGROUND_MODE" in cpu|assets) ;; *) echo 'Invalid background mode'; exit 2 ;; esac
           CMD=(python shortgpt_supertest.py --prompt "$COMEDY_PROMPT" --planner gguf
                --images "$BACKGROUND_MODE" --tts espeak
-               --assets-dir "$ASSET_ROOT"
+               --assets-dir "$ASSET_ROOT" --pacing "${PACING:-readable}"
                --output output/ShortGPT_Original_Full_OpenWeights_AI.mp4)
           if [ "${USE_STORY_PLAN:-false}" = 'true' ]; then
             test -f "$ASSET_ROOT/story_plan.json" || { echo 'Requested story_plan.json missing'; exit 2; }
@@ -87,6 +93,7 @@ jobs:
           mode=os.environ.get('BACKGROUND_MODE') or 'cpu'
           assert m['planner']=='gguf' and m['image_backend']==mode,m
           assert m['asset_profile']['memory_documents'], 'Creative memory was not loaded'
+          assert m['pacing'] in ('readable','original')
           if mode=='cpu':assert m['ai_generated_images']>=1, 'SSD-1B image inference missing'
           assert m['shortgpt_upstream_engine_executed'] is False
           assert m['actual_mp4'] is True and {'h264','aac'}<=codes
