@@ -49,8 +49,8 @@ def safe_plan(plan: dict) -> dict:
         # The LLM sometimes mentions the protagonist despite saying 'no characters'.
         # Strip foreground figure descriptions: the same vector character is composited
         # afterwards, so an AI-painted boy here would create an accidental duplicate.
-        image_prompt=re.sub(r'(?i)\\b(?:boy|girl|kid|child|man|woman|person|people|human|character|mascot)\\b[^,.;]*','',image_prompt)
-        image_prompt=re.sub(r'\\s+,',',',image_prompt).strip(', . ')
+        image_prompt=re.sub(r'(?i)\b(?:boy|girl|kid|child|man|woman|person|people|human|character|mascot)\b[^,.;]*','',image_prompt)
+        image_prompt=re.sub(r'\s+,',',',image_prompt).strip(', . ')
         if not image_prompt:image_prompt=f'Clean simple funny cartoon illustration of a {location}'
         image_prompt=(f'Original 2D cel-shaded {location} environment, {image_prompt}. '
                       'Scenery and props only, EMPTY scene, no people, no characters, no faces, no text, no watermark')[:400]
