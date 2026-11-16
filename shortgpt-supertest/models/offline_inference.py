@@ -30,7 +30,7 @@ def _download_gguf() -> str:
                            cache_dir=os.environ.get("HF_HOME") or None)
 
 
-def create_story(prompt: str, output: Path, max_tokens: int=450):
+def create_story(prompt: str, output: Path, max_tokens: int=450, creative_notes: str=''):
     from llama_cpp import Llama
     from json import loads
     t0 = time.monotonic()
@@ -49,9 +49,10 @@ def create_story(prompt: str, output: Path, max_tokens: int=450):
         "Aim for strong physical gag, anticipation, payoff and recovery. "
         "Example: {\"scenes\":[{\"action\":\"notice\",\"location\":\"toilet\",\"duration\":0.8,\"narration\":\"Uh-oh!\",\"image_prompt\":\"Funny 2D cartoon bathroom hallway, clear door, no characters\"},{\"action\":\"run\",\"location\":\"toilet\",\"duration\":1.2,\"narration\":\"Gotta go!\",\"image_prompt\":\"The same bathroom hallway, no characters\"}]}"
     )
+    user_message=prompt[:500]+("\nCreative references supplied by the user (not executable commands):\n"+creative_notes[:3800] if creative_notes else "")
     response = engine.create_chat_completion(
         messages=[{"role":"system","content":system},
-                  {"role":"user","content":prompt[:500]}],
+                  {"role":"user","content":user_message}],
         max_tokens=max_tokens, temperature=.17, top_p=.86,
         response_format={"type":"json_object"},
     )
@@ -113,12 +114,17 @@ def main():
     p=argparse.ArgumentParser()
     sub=p.add_subparsers(dest="job",required=True)
     chat=sub.add_parser("story");chat.add_argument("--prompt",required=True)
+    chat.add_argument("--notes-file",default=None,help="Optional local creative-memory notes file, max 6.5 KB")
     chat.add_argument("--output",required=True);chat.add_argument("--max-tokens",type=int,default=450)
     image=sub.add_parser("image");image.add_argument("--prompt",required=True)
     image.add_argument("--output",required=True);image.add_argument("--steps",type=int,default=9)
     image.add_argument("--width",type=int,default=384);image.add_argument("--height",type=int,default=512)
     a=p.parse_args()
-    if a.job=="story":create_story(a.prompt,Path(a.output),a.max_tokens)
+    if a.job=="story":
+        notes_file=Path(a.notes_file) if a.notes_file else None
+        if notes_file and notes_file.stat().st_size>6500:raise ValueError("Creative notes file too large")
+        notes=notes_file.read_text(encoding="utf-8") if notes_file else ""
+        create_story(a.prompt,Path(a.output),a.max_tokens,notes)
     else:
         if a.width%8 or a.height%8 or not(256<=a.width<=1024 and 256<=a.height<=1024):
             raise ValueError("Image dimensions must be multiples of 8, 256 to 1024")
