@@ -4,7 +4,7 @@ async function run(){
   mkdirSync('out',{recursive:true});
   const output=await renderVideo({
     projectFile:'./src/project.ts',
-    settings:{outDir:'out',outFile:'toon-revideo.mp4',workers:1,dimensions:[640,360],
+    settings:{outDir:'out',outFile:'toon-revideo.mp4',workers:1,
       logProgress:true,ffmpeg:{ffmpegPath:'ffmpeg',ffmpegLogLevel:'error'},
       puppeteer:{args:['--no-sandbox']}}
   });
