@@ -276,7 +276,7 @@ def run(prompt:str,output:Path,planner:str='offline',images:str='procedural',tts
     plan=llm_plan(prompt,planner)
     output=output.resolve();output.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='sgst-',dir=output.parent) as tmp:
-        work=Path(tmp);scenes=[];providers=[];image_count=0;cache={}
+        work=Path(tmp);scenes=[];providers=[];image_count=0;cache={};saved_ai_images=[]
         start=time.monotonic()
         for index,scene in enumerate(plan['scenes']):
             # Reuse one generated environment per location, reducing HF provider
@@ -286,7 +286,11 @@ def run(prompt:str,output:Path,planner:str='offline',images:str='procedural',tts
                 if images=='hf' and image_count>=int(os.environ.get('HF_IMAGE_LIMIT','2')):
                     raise PipelineError('HF_IMAGE_LIMIT reached; limit AI requests to avoid unexpected charges')
                 cache[cache_key]=hf_background(scene,images)
-                if cache[cache_key][1]: image_count+=1
+                if cache[cache_key][1]:
+                    image_count+=1
+                    preview=output.parent/f'{output.stem}_ai_background_{scene["location"]}.png'
+                    cache[cache_key][0].save(preview)
+                    saved_ai_images.append(preview.name)
             image,ai=cache[cache_key]
             providers.append('hf-image' if ai else 'procedural-vector')
             dur=scene['duration'];frames=max(1,int(round(FPS*dur)))
@@ -319,7 +323,7 @@ def run(prompt:str,output:Path,planner:str='offline',images:str='procedural',tts
        'actual_mp4':True,'output':str(output),'duration_requested':plan['length'],
        'render_wall_seconds':elapsed,'width':FRAME_W,'height':FRAME_H,'fps':FPS,
        'scene_count':len(plan['scenes']),'planner':planner,'image_backend':images,
-       'ai_generated_images':image_count,'tts_backend':tts,'frame_animation':'procedural body+facial motion',
+       'ai_generated_images':image_count,'ai_image_files':saved_ai_images,'tts_backend':tts,'frame_animation':'procedural body+facial motion',
        'shortgpt_upstream_engine_executed':False,'model_prompt_executed_as_code':False,
        'source_framework':'RayVentura/ShortGPT design adapted in isolated MIT-compatible pipeline',
        'scenes':plan['scenes']}
