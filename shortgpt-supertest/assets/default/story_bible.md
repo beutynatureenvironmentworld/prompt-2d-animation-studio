@@ -1,0 +1,1 @@
+The original hero wears a teal hoodie, has dark hair, and usually has a neutral or determined expression. A joke has anticipation -> physical action -> sharp surprise -> brief recovery. Prefer readable gestures, clear eye direction, short lines, and a punchline. Avoid constant grinning, excessive dialogue, impossible props, or unrelated scene changes.
