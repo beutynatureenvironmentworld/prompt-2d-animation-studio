@@ -1,0 +1,119 @@
+name: Funny Toon Mascot — Hourly Visual QA and Safe Animation Tests
+on:
+  schedule:
+    - cron: '37 * * * *'
+  workflow_dispatch:
+    inputs:
+      gag:
+        description: 'Choose comedy scene for the current test'
+        required: true
+        type: choice
+        options: [auto, door, prank, race, surprise]
+        default: auto
+  push:
+    branches: [experiment/hourly-mascot-qa-loop]
+    paths:
+      - 'mascot-lab/src/**'
+      - 'mascot-lab/tests/**'
+      - '.github/workflows/mascot-lab-hourly.yml'
+permissions:
+  contents: write
+concurrency:
+  group: funny-toon-mascot-experiment
+  cancel-in-progress: false
+jobs:
+  render-review-tune:
+    name: Render two original mascot variants and compare decoded frames
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CHOSEN_GAG: ${{ inputs.gag }}
+    steps:
+      - name: Checkout protected experiment branch; do not modify main
+        uses: actions/checkout@v4
+        with:
+          ref: experiment/hourly-mascot-qa-loop
+          persist-credentials: true
+          fetch-depth: 2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU-only open-source animation and visual QA tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install -q -r mascot-lab/requirements.txt
+          ffmpeg -version | head -1
+      - name: Run unit tests before rendering
+        run: python -m unittest discover -s mascot-lab/tests -v
+      - name: Determine gag sequence and generate two different candidates
+        run: |
+          set -euo pipefail
+          if [ -z "$CHOSEN_GAG" ] || [ "$CHOSEN_GAG" = auto ]; then
+            GAGS=(door prank race surprise)
+            INDEX=$(( ( $(date -u +%s) / 3600 ) % 4 ))
+            CHOSEN_GAG="${GAGS[$INDEX]}"
+          fi
+          echo "CHOSEN_GAG=$CHOSEN_GAG" >> "$GITHUB_ENV"
+          python mascot-lab/src/loop.py \
+            --sheet mascot-lab/config/permanent_mascot.webp \
+            --config mascot-lab/config/tuning.json \
+            --out mascot-lab/out \
+            --gag "$CHOSEN_GAG" --mode cycle
+      - name: Verify actual H264/AAC output and that clipping gates passed
+        run: |
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json mascot-lab/out/LATEST_VERIFIED.mp4
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('mascot-lab/out/LATEST_REPORT.json')
+          d=json.loads(p.read_text())
+          assert d['promoted'] and d['best']['passed_numeric_checks'], d
+          assert d['best']['max_clipping_fraction']<=.025
+          assert d['best']['motion_px']>=55
+          assert Path('mascot-lab/out/LATEST_FRAMES.jpg').stat().st_size>10000
+          print('TRUE_VIDEO_FRAME_REVIEW_PASS',d['gag'],d['best'])
+          PY
+      - name: Preserve latest audited tuning and quality notes on experiment branch
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path('mascot-lab/out/LATEST_REPORT.json').read_text())
+          target=Path('mascot-lab/config/tuning.json')
+          target.write_text(json.dumps(report['best_settings'],indent=2)+'\n')
+          PY
+          git config user.name 'funny-toon-qa-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mascot-lab/config/tuning.json
+          git add -f mascot-lab/out/LATEST_REPORT.md mascot-lab/out/LATEST_REPORT.json
+          # Git history stays small: refresh permanent direct-download MP4 at most
+          # once every 6 hours (or first verified render). Hourly runs keep artifacts.
+          HOUR=$(date -u +%H)
+          if [ ! -f mascot-lab/out/.committed_before ] && ! git ls-files --error-unmatch mascot-lab/out/LATEST_VERIFIED.mp4 >/dev/null 2>&1; then
+            git add -f mascot-lab/out/LATEST_VERIFIED.mp4 mascot-lab/out/LATEST_FRAMES.jpg
+            echo first_verified
+          elif [ $((10#$HOUR % 6)) -eq 0 ]; then
+            git add -f mascot-lab/out/LATEST_VERIFIED.mp4 mascot-lab/out/LATEST_FRAMES.jpg
+            echo six_hour_refresh
+          fi
+          if ! git diff --cached --quiet; then
+            git commit -m "qa: ${CHOSEN_GAG} original mascot render and frame review [skip ci]"
+            git push origin HEAD:experiment/hourly-mascot-qa-loop
+          else
+            echo 'No new verified quality changes this hour'
+          fi
+      - name: Upload original MP4, frame contact sheet, before/after and QA report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: funny-toon-hourly-qa-${{ github.run_number }}
+          path: |
+            mascot-lab/out/LATEST_VERIFIED.mp4
+            mascot-lab/out/LATEST_FRAMES.jpg
+            mascot-lab/out/LATEST_REPORT.md
+            mascot-lab/out/LATEST_REPORT.json
+            mascot-lab/out/candidate_0.mp4
+            mascot-lab/out/candidate_1.mp4
+          retention-days: 7
+          if-no-files-found: warn
