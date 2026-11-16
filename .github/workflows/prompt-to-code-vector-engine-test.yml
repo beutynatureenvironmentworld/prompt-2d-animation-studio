@@ -113,6 +113,7 @@ jobs:
           cp ../revideo-fixed/project.ts src/project.ts
           cp ../revideo-fixed/render.ts src/render.ts
           npm install --no-audit --no-fund
+          npm install --no-audit --no-fund @revideo/vite-plugin @revideo/ui @preact/preset-vite
           npm run render
           ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json out/toon-revideo.mp4
           test -s out/toon-revideo.mp4
