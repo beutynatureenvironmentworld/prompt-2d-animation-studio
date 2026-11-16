@@ -1,0 +1,77 @@
+name: ShortGPT Asset Memory and Motion Smoke Test (CPU)
+on:
+  push:
+    branches: [feature/shortgpt-memory-assets-quality]
+    paths:
+      - 'shortgpt-supertest/**'
+      - '.github/workflows/shortgpt-assets-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-asset-and-memory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install lightweight offline test dependencies only
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg espeak-ng
+          python -m pip install 'Pillow>=10.3,<12'
+      - name: Run pre-existing and new memory/asset safety tests
+        run: |
+          cd shortgpt-supertest
+          python -m unittest discover -s tests -v
+          python -m py_compile shortgpt_supertest.py asset_pack.py models/offline_inference.py
+      - name: Simulate a user-uploaded bathroom background in the asset profile
+        run: |
+          python - <<'PY'
+          from PIL import Image,ImageDraw
+          from pathlib import Path
+          p=Path('shortgpt-supertest/assets/default/background_toilet.png')
+          im=Image.new('RGB',(360,640),'#e7d3b6')
+          d=ImageDraw.Draw(im)
+          d.rectangle((0,450,360,640),fill='#c6ac89')
+          d.rectangle((235,155,335,450),fill='#fdf7e2',outline='#242424',width=7)
+          d.ellipse((315,304,325,314),fill='#242424')
+          im.save(p)
+          print('ASSET_UPLOAD_SIMULATED',p,p.stat().st_size)
+          PY
+      - name: Render real narrated portrait MP4 from custom assets, story memory and spatial motion
+        run: |
+          cd shortgpt-supertest
+          python shortgpt_supertest.py \
+            --prompt 'Boy desperately runs to a toilet door, knocks, is shocked, then recovers' \
+            --planner offline --images assets --assets-dir assets/default --tts espeak \
+            --output output/Custom_Assets_Story_Memory_Smoke.mp4
+      - name: Verify user profile actually changed video and H264/AAC output
+        run: |
+          cd shortgpt-supertest
+          python - <<'PY'
+          import json,subprocess
+          from pathlib import Path
+          p=Path('output/Custom_Assets_Story_Memory_Smoke.mp4')
+          data=json.load(open(p.with_suffix('.json')))
+          assets=data['asset_profile']
+          assert data['image_backend']=='assets'
+          assert 'toilet' in assets['available_backgrounds']
+          assert 'memory.md' in assets['memory_documents']
+          assert 'style.md' in assets['memory_documents']
+          assert data['scene_count']>=4
+          probe=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries','stream=codec_name:format=duration','-of','json',str(p)]))
+          assert {'h264','aac'} <= {x['codec_name'] for x in probe['streams']}
+          print('REAL_ASSET_BACKGROUND_AND_PERSISTENT_MEMORY_MP4_VERIFIED',p.stat().st_size,probe['format']['duration'])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shortgpt-asset-and-memory-genuine-mp4-test
+          path: |
+            shortgpt-supertest/output/Custom_Assets_Story_Memory_Smoke.mp4
+            shortgpt-supertest/output/Custom_Assets_Story_Memory_Smoke.json
+            shortgpt-supertest/assets/default/background_toilet.png
+          if-no-files-found: warn
+          retention-days: 7
