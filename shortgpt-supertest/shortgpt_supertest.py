@@ -254,7 +254,9 @@ def run(prompt:str,output:Path,planner:str='offline',images:str='procedural',tts
         work=Path(tmp);scenes=[];providers=[];image_count=0;cache={}
         start=time.monotonic()
         for index,scene in enumerate(plan['scenes']):
-            cache_key=(scene['location'],scene['image_prompt'],images)
+            # Reuse one generated environment per location, reducing HF provider
+            # usage and keeping background identity stable across quick cuts.
+            cache_key=(scene['location'],scene['image_prompt'] if images=='procedural' else '',images)
             if cache_key not in cache:
                 if images=='hf' and image_count>=int(os.environ.get('HF_IMAGE_LIMIT','2')):
                     raise PipelineError('HF_IMAGE_LIMIT reached; limit AI requests to avoid unexpected charges')
