@@ -1,0 +1,81 @@
+name: ShortGPT SuperTest CPU Bridge
+on:
+  push:
+    branches: [experiment/shortgpt-supertest-hf-oracle]
+    paths: ['shortgpt-supertest/**','.github/workflows/shortgpt-supertest-cpu.yml']
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'English or Sinhala comedy short story idea'
+        type: string
+        required: true
+        default: 'Funny kid runs to the toilet and knocks, gets shocked, recovers'
+      ai_image_test:
+        description: 'Use Hugging Face AI images (requires credits and Secrets HF_TOKEN and HF_IMAGE_MODEL)'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  standalone-cpu-render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      USER_PROMPT: ${{ inputs.prompt }}
+      RUN_AI_IMAGES: ${{ inputs.ai_image_test }}
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      HF_IMAGE_MODEL: ${{ vars.HF_IMAGE_MODEL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU tools (not heavy ShortGPT inference models)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg espeak-ng
+          python -m pip install -q 'Pillow>=10.3,<12' 'huggingface_hub>=0.31,<2'
+      - name: Python tests and real CPU narrated video
+        run: |
+          cd shortgpt-supertest
+          python -m unittest discover -s tests -v
+          if [ -z "$USER_PROMPT" ]; then USER_PROMPT='Funny kid runs to the toilet and knocks, gets shocked, recovers'; fi
+          if [ "$RUN_AI_IMAGES" = "true" ]; then
+            if [ -z "$HF_TOKEN" ] || [ -z "$HF_IMAGE_MODEL" ]; then echo 'Missing HF_TOKEN or HF_IMAGE_MODEL (safe fail)'; exit 2; fi
+            python shortgpt_supertest.py --prompt "$USER_PROMPT" --planner offline --images hf --tts espeak --output output/shortgpt-ai-short.mp4
+          else
+            python shortgpt_supertest.py --prompt "$USER_PROMPT" --planner offline --images procedural --tts espeak --output output/shortgpt-cpu-demo.mp4
+          fi
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json output/*.mp4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shortgpt-supertest-genuine-ffmpeg-video
+          path: |
+            shortgpt-supertest/output/*.mp4
+            shortgpt-supertest/output/*.json
+          retention-days: 7
+          if-no-files-found: warn
+  original-shortgpt-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Fetch exact upstream ShortGPT stable commit
+        run: |
+          git clone -q https://github.com/RayVentura/ShortGPT.git upstream-shortgpt
+          cd upstream-shortgpt
+          test "$(git rev-parse HEAD)" != ''
+          git checkout -q 3df4e0f7a422bf7386565d498bf4521a2544c614
+          python -m compileall -q shortGPT
+          echo 'ORIGINAL_SHORTGPT_CODE_SYNTAX_AUDIT_PASS'
+      - name: Install the pinned original package metadata without massive GPU weights
+        run: |
+          cd upstream-shortgpt
+          python -m pip install -q --no-deps .
+          python - <<'PY'
+          import shortGPT.audio.voice_module as voice
+          print('ORIGINAL_SHORTGPT_VOICE_MODULE_IMPORTED', voice.VoiceModule.__name__)
+          PY
