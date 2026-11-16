@@ -49,5 +49,10 @@ def make_readable(plan: dict, target_seconds: float = 9.0) -> dict:
                 excess-=n
     for s in scenes:
         s["duration"] = round(s["duration"],2)
+    # Per-scene rounding can otherwise push an exactly-12-second plan to 12.01.
+    overflow = round(sum(s["duration"] for s in scenes)-MAX_TOTAL,2)
+    if overflow>0:
+        longest=max(scenes,key=lambda x:x["duration"])
+        longest["duration"]=round(longest["duration"]-overflow,2)
     out["length"]=round(sum(s["duration"] for s in scenes),2)
     return out
