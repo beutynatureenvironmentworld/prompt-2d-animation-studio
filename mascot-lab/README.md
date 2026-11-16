@@ -1,6 +1,6 @@
 # Funny Toon Ever — Hourly Mascot Super Test Lab
 
-**Original character:** the user's existing black-and-white permanent six-pose reference, reused from `prompt-sixpose/assets/six_pose_sheet_for_git.png` in the same repo. Never redraw or regenerate a replacement identity. Six original source poses, one complete facial layer per frame, no extra artificial pupils.
+**Original character:** the user's exact uploaded black-and-white smiling six-pose permanent character sheet, preserved at `mascot-lab/config/permanent_mascot.webp` (full 1536×1024 resolution, visually loss-minimized WEBP). This is a compressed copy of the user's supplied reference, not a regenerated or substituted mascot. Never redraw or regenerate a replacement identity. Six original source poses, one complete facial layer per frame, no extra artificial pupils.
 
 **Architecture:** source sheet → CPU OpenCV whole-character silhouette extraction → pose-to-pose 24 fps animation and physical staging → FFmpeg H.264/AAC MP4 → read actual encoded frames with OpenCV → check spatial travel, estimated door-hand reach, excessive image clipping, codec/length, motion. Compare two parameter variants, promote *only* the variant passing numeric gates; keep a real 3×3 filmstrip so future ChatGPT reviews can inspect frames directly.
 
