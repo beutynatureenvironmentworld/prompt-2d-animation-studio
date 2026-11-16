@@ -126,7 +126,7 @@ def load_asset_pack(path: Path | str | None = None) -> AssetPack:
         if skills_root.is_symlink():
             raise AssetError("skills cannot be a symlink")
         for f in sorted(skills_root.glob("*.md"))[:6]:
-            content = read_text(skills_root, "ignored") if False else read_text(skills_root, f.name, 1100)
+            content = read_text(skills_root, f.name, 1100)
             if content:
                 sections.append("skills/" + f.name + ":\n" + content)
                 names.append("skills/" + f.name)
