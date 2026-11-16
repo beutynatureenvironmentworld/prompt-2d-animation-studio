@@ -52,4 +52,22 @@ class AssetPackTests(unittest.TestCase):
         # At least one visible change must involve head location, not just footsteps.
         self.assertNotEqual(start.getpixel((65,304)),end.getpixel((65,304)))
 
+class QualityWarnings(unittest.TestCase):
+    def test_story_voice_quality_flags(self):
+        from quality_audit import review_plan
+        story={'scenes':[{'action':'run','location':'toilet','duration':.8,'narration':'I have to run as fast as I possibly can'},
+                         {'action':'knock','location':'toilet','duration':.6,'narration':'Please open up quickly'}]}
+        warnings=review_plan(story)
+        self.assertTrue(any('cut off' in w for w in warnings))
+        self.assertTrue(any('under 8 seconds' in w for w in warnings))
+
+    def test_good_comedy_plan_has_no_narration_warning(self):
+        from quality_audit import review_plan
+        story={'scenes':[{'action':'run','location':'toilet','duration':2.5,'narration':'I need it!'},
+                         {'action':'knock','location':'toilet','duration':2.0,'narration':'Hello?'},
+                         {'action':'shock','location':'toilet','duration':2.5,'narration':'Locked!'},
+                         {'action':'recover','location':'toilet','duration':1.5,'narration':'Oops.'}]}
+        warnings=review_plan(story)
+        self.assertFalse(any('cut off' in w for w in warnings))
+
 if __name__=='__main__':unittest.main()
