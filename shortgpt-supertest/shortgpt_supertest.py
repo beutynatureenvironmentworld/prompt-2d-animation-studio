@@ -23,6 +23,7 @@ import io
 import sys
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from asset_pack import load_asset_pack, read_text, profile_info
+from quality_audit import review_plan
 
 FRAME_W, FRAME_H, FPS = 360, 640, 18
 STEPS = ("notice", "run", "knock", "jump", "shock", "slip", "recover", "dance")
@@ -305,6 +306,7 @@ def run(prompt:str,output:Path,planner:str='offline',images:str='procedural',tts
     if style and images in ('cpu','hf'):
         for scene in plan['scenes']:
             scene['image_prompt']=(style[:160]+'. '+scene['image_prompt'])[:400]
+    quality_warnings=review_plan(plan,pack)
     output=output.resolve();output.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='sgst-',dir=output.parent) as tmp:
         work=Path(tmp);scenes=[];providers=[];image_count=0;cache={};saved_ai_images=[]
@@ -355,7 +357,7 @@ def run(prompt:str,output:Path,planner:str='offline',images:str='procedural',tts
        'actual_mp4':True,'output':str(output),'duration_requested':plan['length'],
        'render_wall_seconds':elapsed,'width':FRAME_W,'height':FRAME_H,'fps':FPS,
        'scene_count':len(plan['scenes']),'planner':planner,'story_source':scene_source,'image_backend':images,
-       'asset_profile':profile_info(pack),
+       'asset_profile':profile_info(pack),'quality_warnings':quality_warnings,
        'ai_generated_images':image_count,'ai_image_files':saved_ai_images,'tts_backend':tts,'frame_animation':'procedural body+facial motion',
        'shortgpt_upstream_engine_executed':False,'model_prompt_executed_as_code':False,
        'source_framework':'RayVentura/ShortGPT design adapted in isolated MIT-compatible pipeline',
