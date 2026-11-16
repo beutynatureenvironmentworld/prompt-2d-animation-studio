@@ -1,1 +1,6 @@
-{"contact_offset": 0, "right_hand_offset": 78}
+{
+  "contact_offset": 7,
+  "right_hand_offset": 75,
+  "start_x": 110,
+  "slip_x": 175
+}
