@@ -24,6 +24,7 @@ import sys
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from asset_pack import load_asset_pack, read_text, profile_info
 from quality_audit import review_plan
+from pacing import make_readable
 
 FRAME_W, FRAME_H, FPS = 360, 640, 18
 STEPS = ("notice", "run", "knock", "jump", "shock", "slip", "recover", "dance")
@@ -292,7 +293,7 @@ def _audio_for_scene(text:str,mode:str,seconds:float,path:Path):
     return fixed
 
 def run(prompt:str,output:Path,planner:str='offline',images:str='procedural',tts:str='espeak',
-        assets_dir:Path|None=None,story_plan_file:Path|None=None)->dict:
+        assets_dir:Path|None=None,story_plan_file:Path|None=None,pacing:str='original')->dict:
     if not 3<=len(prompt)<=500:raise PipelineError('Prompt must be 3..500 chars')
     if not shutil.which('ffmpeg'):raise PipelineError('ffmpeg not installed')
     pack=load_asset_pack(assets_dir)
@@ -302,6 +303,9 @@ def run(prompt:str,output:Path,planner:str='offline',images:str='procedural',tts
     else:
         plan=llm_plan(prompt,planner,pack.notes)
         scene_source=planner
+    if pacing not in ('original','readable'):raise PipelineError('Pacing mode must be original or readable')
+    if pacing=='readable':
+        plan=safe_plan(make_readable(plan))
     style=read_text(pack.root,'style.md',320) if pack.root else ''
     if style and images in ('cpu','hf'):
         for scene in plan['scenes']:
@@ -356,7 +360,7 @@ def run(prompt:str,output:Path,planner:str='offline',images:str='procedural',tts
     metadata={
        'actual_mp4':True,'output':str(output),'duration_requested':plan['length'],
        'render_wall_seconds':elapsed,'width':FRAME_W,'height':FRAME_H,'fps':FPS,
-       'scene_count':len(plan['scenes']),'planner':planner,'story_source':scene_source,'image_backend':images,
+       'scene_count':len(plan['scenes']),'planner':planner,'story_source':scene_source,'pacing':pacing,'image_backend':images,
        'asset_profile':profile_info(pack),'quality_warnings':quality_warnings,
        'ai_generated_images':image_count,'ai_image_files':saved_ai_images,'tts_backend':tts,'frame_animation':'procedural body+facial motion',
        'shortgpt_upstream_engine_executed':False,'model_prompt_executed_as_code':False,
@@ -372,8 +376,9 @@ if __name__=='__main__':
     p.add_argument('--images',choices=['procedural','hf','cpu','assets'],default='procedural')
     p.add_argument('--assets-dir',type=Path,default=None,help='Read user-managed character/colors/backgrounds/style/memory files')
     p.add_argument('--story-plan',type=Path,default=None,help='Validated user-supplied scene JSON overrides LLM planner')
+    p.add_argument('--pacing',choices=['original','readable'],default='original',help='Readability pacing extends short beats to avoid clipped voice')
     p.add_argument('--tts',choices=['espeak','edge','none'],default='espeak')
     p.add_argument('--output',default='output/funny_short.mp4')
     x=p.parse_args()
     print(json.dumps(run(x.prompt,Path(x.output),x.planner,x.images,x.tts,
-                         x.assets_dir,x.story_plan),ensure_ascii=False,indent=2))
+                         x.assets_dir,x.story_plan,x.pacing),ensure_ascii=False,indent=2))
