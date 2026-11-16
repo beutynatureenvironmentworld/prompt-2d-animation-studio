@@ -108,6 +108,10 @@ jobs:
       - name: Install Revideo renderer and actually render Canvas MP4
         run: |
           cd prompt-to-code/revideo
+          rm -f src/scene.tsx
+          cp ../revideo-fixed/scene.ts src/scene.ts
+          cp ../revideo-fixed/project.ts src/project.ts
+          cp ../revideo-fixed/render.ts src/render.ts
           npm install --no-audit --no-fund
           npm run render
           ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json out/toon-revideo.mp4
