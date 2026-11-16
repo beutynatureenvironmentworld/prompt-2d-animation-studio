@@ -35,6 +35,21 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg espeak-ng
           python -m pip install -q 'Pillow>=10.3,<12' 'huggingface_hub>=0.31,<2'
+      - name: Read-only Hugging Face readiness (no model inference credits)
+        run: |
+          python - <<'PY'
+          import os
+          token=os.environ.get('HF_TOKEN','')
+          model=os.environ.get('HF_IMAGE_MODEL','')
+          print('HF_TOKEN_CONFIGURED',bool(token),'HF_IMAGE_MODEL_CONFIGURED',bool(model))
+          if token:
+            from huggingface_hub import HfApi
+            try:
+              HfApi().whoami(token=token)
+              print('HF_READ_ONLY_AUTH_PASS')
+            except Exception as exc:
+              print('HF_READ_ONLY_AUTH_FAILED',type(exc).__name__)
+          PY
       - name: Python tests and real CPU narrated video
         run: |
           cd shortgpt-supertest
@@ -76,6 +91,9 @@ jobs:
           cd upstream-shortgpt
           python -m pip install -q --no-deps .
           python - <<'PY'
-          import shortGPT.audio.voice_module as voice
-          print('ORIGINAL_SHORTGPT_VOICE_MODULE_IMPORTED', voice.VoiceModule.__name__)
+          import importlib.util
+          spec=importlib.util.spec_from_file_location('shortgpt_voice_module','shortGPT/audio/voice_module.py')
+          mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+          print('ORIGINAL_SHORTGPT_VOICE_ABSTRACT_MODULE_LOADED',mod.VoiceModule.__name__)
+          print('UPSTREAM_FULL_EDITOR_NOT_IMPORTED_NO_OPTIONAL_DEPS')
           PY
