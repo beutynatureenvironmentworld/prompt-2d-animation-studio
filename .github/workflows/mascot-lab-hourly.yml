@@ -56,7 +56,7 @@ jobs:
           fi
           echo "CHOSEN_GAG=$CHOSEN_GAG" >> "$GITHUB_ENV"
           python mascot-lab/src/loop.py \
-            --sheet prompt-sixpose/assets/six_pose_sheet_for_git.png \
+            --sheet mascot-lab/config/permanent_mascot.webp \
             --config mascot-lab/config/tuning.json \
             --out mascot-lab/out \
             --gag "$CHOSEN_GAG" --mode cycle
