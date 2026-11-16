@@ -36,7 +36,7 @@ jobs:
             'accelerate==1.12.0' 'huggingface_hub>=0.34,<1' 'safetensors>=0.4' \
             'Pillow>=10.3,<12' 'sentencepiece'
           df -h .
-      - name: Full single prompt: REAL Qwen3 AI script, REAL SSD1B AI background, espeak voice, FFmpeg H264 video
+      - name: 'Full single prompt using Qwen3, SSD1B, espeak, FFmpeg'
         run: |
           cd shortgpt-supertest
           if [ -z "$COMEDY_PROMPT" ]; then COMEDY_PROMPT='A funny boy desperately runs to a locked toilet door, knocks, gets shocked and recovers'; fi
