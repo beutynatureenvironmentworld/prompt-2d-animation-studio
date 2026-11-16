@@ -13,8 +13,13 @@ on:
       planner_mode:
         description: 'Story planner: offline or HF hosted LLM (may consume credits)'
         type: choice
-        options: [offline, hf]
+        options: [offline, hf, gguf]
         default: offline
+      image_mode:
+        description: 'procedural = free, hf = provider credits, cpu = local Apache-2.0 SSD-1B (slow, 16GB RAM recommended)'
+        type: choice
+        options: [procedural, hf, cpu]
+        default: procedural
       ai_image_test:
         description: 'Use Hugging Face AI images (requires credits and Secrets HF_TOKEN and HF_IMAGE_MODEL)'
         type: boolean
@@ -24,10 +29,12 @@ permissions:
 jobs:
   standalone-cpu-render:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 70
     env:
       USER_PROMPT: ${{ inputs.prompt }}
       RUN_AI_IMAGES: ${{ inputs.ai_image_test }}
+      IMAGE_MODE_INPUT: ${{ inputs.image_mode }}
+      CPU_IMAGE_STEPS: '9'
       PLANNER_MODE: ${{ inputs.planner_mode }}
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
       HF_IMAGE_MODEL: ${{ vars.HF_IMAGE_MODEL }}
@@ -42,6 +49,15 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg espeak-ng
           python -m pip install -q 'Pillow>=10.3,<12' 'huggingface_hub>=0.31,<2'
+      - name: Install Qwen3 GGUF CPU engine only when selected
+        if: ${{ inputs.planner_mode == 'gguf' }}
+        run: |
+          python -m pip install --no-cache-dir 'llama-cpp-python>=0.3.16,<0.4'
+      - name: Install SSD-1B real CPU diffusion engine only when selected
+        if: ${{ inputs.image_mode == 'cpu' }}
+        run: |
+          python -m pip install --no-cache-dir 'torch==2.5.1+cpu' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install --no-cache-dir 'diffusers==0.35.2' 'transformers==4.57.1' 'accelerate==1.12.0' 'huggingface_hub>=0.34,<1' 'safetensors>=0.4' 'sentencepiece'
       - name: Read-only Hugging Face readiness (no model inference credits)
         run: |
           python - <<'PY'
@@ -66,7 +82,7 @@ jobs:
           if [ "$PLANNER_MODE" = "hf" ]; then
             if [ -z "$HF_TOKEN" ] || [ -z "$HF_CHAT_MODEL" ]; then echo 'Missing HF_TOKEN or HF_CHAT_MODEL'; exit 2; fi
           fi
-          IMAGE_MODE=procedural
+          IMAGE_MODE="${IMAGE_MODE_INPUT:-procedural}"
           if [ "$RUN_AI_IMAGES" = "true" ]; then
             if [ -z "$HF_TOKEN" ] || [ -z "$HF_IMAGE_MODEL" ]; then echo 'Missing HF_TOKEN or HF_IMAGE_MODEL'; exit 2; fi
             IMAGE_MODE=hf
@@ -80,6 +96,7 @@ jobs:
           path: |
             shortgpt-supertest/output/*.mp4
             shortgpt-supertest/output/*.json
+            shortgpt-supertest/output/*.png
           retention-days: 7
           if-no-files-found: warn
   original-shortgpt-audit:
