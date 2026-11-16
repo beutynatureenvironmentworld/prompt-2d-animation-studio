@@ -50,3 +50,12 @@ A `huggingface_space/` Gradio UI and `Dockerfile` are provided. **Hugging Face c
 - Simple procedural puppet movement differs from generative AI animation and cinematic character acting. Character consistency is achieved by reusing the drawn foreground rig; background images can vary.
 - The upstream ShortGPT code contains insecure SSL `verify=False` in Bing image scraping. We do **not** use that legacy scraper and never auto-run model-supplied programs.
 - Content rights and usage restrictions for generated outputs remain the user's responsibility.
+
+## Verified results, 16 November 2026
+
+- GitHub standalone CPU bridge render, 5 tests, pinned official source compile/import audit **PASS**: https://github.com/beutynatureenvironmentworld/prompt-2d-animation-studio/actions/runs/43864252487
+- Full original ShortGPT CPU dependency installation, `pip check`, and `ContentShortEngine` import **PASS**: https://github.com/beutynatureenvironmentworld/prompt-2d-animation-studio/actions/runs/43865140639 . Original upstream requirements and setup.py conflict on OpenAI 1.37.0 / 1.37.2; the isolated audit overrides to 1.37.2.
+- Oracle AI host in separate workspace: original full ShortGPT source checked out and compiled, bridge produced a narrated 6.2-second H.264/AAC video in 9.8 seconds. Existing production services not changed.
+- The existing GitHub `HF_TOKEN` passed read-only authentication; `HF_IMAGE_MODEL` repository variable missing. **No paid inference or actual AI image generation yet.**
+- Private Hugging Face dataset containing source and generated MP4 **successfully created**: https://huggingface.co/datasets/gkasun/shortgpt-supertest-private-kit ; evidence https://github.com/beutynatureenvironmentworld/prompt-2d-animation-studio/actions/runs/43865707224 . Dataset is **storage, not a running compute Space**.
+- Experiment PR (unmerged): https://github.com/beutynatureenvironmentworld/prompt-2d-animation-studio/pull/18
