@@ -1,11 +1,11 @@
 # Funny Toon Ever — Real MP4 QA
 
-Gag: **prank**. Best measured score: **92.02**; geometry/video gates: **True**.
+Gag: **prank**. Best measured score: **97.02**; geometry/video gates: **True**.
 
-- Run travel: 56.79 px
-- Estimated door contact gap: 3 px
-- Decoded frame difference: 16.838
-- Max cropped character silhouette: 0.61%
+- Run travel: 63.76 px
+- Estimated door contact gap: 1 px
+- Decoded frame difference: 17.252
+- Max cropped character silhouette: 1.48%
 
 ## Remaining artistic limitations
 - source poses all grin: expression variation and eye-pupil repair still need visual/manual validation
