@@ -1,0 +1,55 @@
+name: EXPERIMENT native Blender Grease Pencil 2D animation
+on:
+  push:
+    branches: [experiment/iki-blender-prompt-puppet-20261116]
+    paths: ['puppet-lab/blender_grease_pencil.py','.github/workflows/experiment-grease-pencil.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-grease-pencil:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install real CPU Blender and ffmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq blender ffmpeg xvfb libegl1 libgl1-mesa-dri libgbm1
+          blender --version | head -3
+      - name: Render native Grease Pencil frame-by-frame animated character
+        run: |
+          set -euo pipefail
+          python -m py_compile puppet-lab/blender_grease_pencil.py
+          xvfb-run -a blender -b -t 2 --factory-startup --python puppet-lab/blender_grease_pencil.py > "$RUNNER_TEMP/gp-render.log" 2>&1 || {
+            tail -100 "$RUNNER_TEMP/gp-render.log"
+            exit 1
+          }
+          grep 'BLENDER_REAL_GREASE_PENCIL_FRAME_ANIMATION_PASS' "$RUNNER_TEMP/gp-render.log"
+      - name: Verify real animated MP4 and native editable project
+        run: |
+          python - <<'PYCHECK'
+          import pathlib,json,hashlib
+          p=pathlib.Path('puppet-lab/output/grease-pencil')
+          d=json.loads((p/'grease-pencil-proof.json').read_text())
+          assert d['actual_native_gp_drawings'] and d['native_gp_frame_count']==72
+          assert d['rendered_frames']==72 and not d['armature_used']
+          assert hashlib.sha256((p/'frames/frame_0001.png').read_bytes()).digest()!=hashlib.sha256((p/'frames/frame_0022.png').read_bytes()).digest()
+          assert (p/'original-grease-pencil-animation.blend').stat().st_size>10000
+          assert (p/'original-grease-pencil-comedy.mp4').stat().st_size>15000
+          print('VERIFIED_NATIVE_GREASE_PENCIL_EDITABLE_2D_MP4')
+          PYCHECK
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json puppet-lab/output/grease-pencil/original-grease-pencil-comedy.mp4
+      - name: Upload new native Grease Pencil animation, editable blend and evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: original-native-grease-pencil-2d-comedy
+          path: |
+            puppet-lab/output/grease-pencil/original-grease-pencil-comedy.mp4
+            puppet-lab/output/grease-pencil/original-grease-pencil-animation.blend
+            puppet-lab/output/grease-pencil/grease-pencil-proof.json
+            puppet-lab/output/grease-pencil/frames/frame_0001.png
+            puppet-lab/output/grease-pencil/frames/frame_0022.png
+          if-no-files-found: warn
+          retention-days: 7
