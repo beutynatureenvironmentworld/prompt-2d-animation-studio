@@ -73,6 +73,7 @@ def make_stroke(frame,points,mat=0,width=70,cyclic=False):
 def circle(cx,cy,rx,ry,steps=32):
     return [(cx+rx*math.cos(i*math.tau/steps),cy+ry*math.sin(i*math.tau/steps)) for i in range(steps)]
 def draw(f):
+    fr=layer.frames.new(f)
     t=(f-1)/FPS
     x=-1.5+2.5*min(1,t/2.0) if t<2 else 1.0-.5*max(0,t-3.8)
     y=-.1+.10*abs(math.sin(t*9))
@@ -110,7 +111,6 @@ def draw(f):
     else:
         make_stroke(fr,[(x-.17,y+1.43),(x,y+1.34),(x+.17,y+1.43)],0,75)
 for f in range(1,COUNT+1):
-    frame=layer.frames.new(f)
     draw(f)
 # Save fully editable native grease-pencil drawing layers before render.
 bpy.ops.wm.save_as_mainfile(filepath=str(ROOT/"original-grease-pencil-animation.blend"))
