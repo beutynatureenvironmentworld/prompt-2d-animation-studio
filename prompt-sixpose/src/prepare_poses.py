@@ -14,6 +14,7 @@ NAMES=['idle_neutral','crouch_anticipation','sprint_angry','sprint_surprise','ju
 
 def extract():
     DEST.mkdir(parents=True,exist_ok=True)
+    (ROOT/'output').mkdir(parents=True,exist_ok=True)
     original=Image.open(SOURCE).convert('RGB')
     ww,hh=original.size
     previews=[]
