@@ -1,0 +1,48 @@
+name: ShortGPT SuperTest private Hugging Face storage
+on:
+  push:
+    branches: [experiment/shortgpt-supertest-hf-oracle]
+    paths: ['.github/workflows/shortgpt-hf-private-storage.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  store-hf-private:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Install safe lightweight CPU tools only
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y ffmpeg espeak-ng
+          python -m pip install -q 'Pillow>=10.3,<12' 'huggingface_hub>=0.31,<2'
+      - name: Render a verified original demo, then archive project + MP4 privately without paid Space compute
+        run: |
+          if [ -z "$HF_TOKEN" ]; then echo 'HF_TOKEN not configured'; exit 2; fi
+          cd shortgpt-supertest
+          python -m unittest discover -s tests -v
+          python shortgpt_supertest.py --planner offline --images procedural --tts espeak --output output/private-hf-demo.mp4 >/dev/null
+          ffprobe -v error -show_entries format=duration -of default=nokey=1:noprint_wrappers=1 output/private-hf-demo.mp4
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from huggingface_hub import HfApi
+          api=HfApi(token=os.environ['HF_TOKEN'])
+          username=api.whoami(token=os.environ['HF_TOKEN'])['name']
+          repo=f'{username}/shortgpt-supertest-private-kit'
+          api.create_repo(repo_id=repo,repo_type='dataset',private=True,exist_ok=True)
+          for path in [
+            'README.md','shortgpt_supertest.py','requirements.txt','Dockerfile',
+            'huggingface_space/app.py','huggingface_space/README.md',
+            'output/private-hf-demo.mp4','output/private-hf-demo.json',
+          ]:
+            api.upload_file(path_or_fileobj=path,path_in_repo=path,repo_id=repo,repo_type='dataset',
+                            commit_message='Archive original ShortGPT SuperTest CPU adapter and verified sample')
+          print('HF_PRIVATE_DATASET_ARCHIVE_SUCCESS',repo)
+          print('HF_ARCHIVE_IS_STORAGE_NOT_EXECUTING_DOCKER_SPACE')
+          PY

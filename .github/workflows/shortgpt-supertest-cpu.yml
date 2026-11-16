@@ -1,0 +1,127 @@
+name: ShortGPT SuperTest CPU Bridge
+on:
+  push:
+    branches: [experiment/shortgpt-supertest-hf-oracle]
+    paths: ['shortgpt-supertest/**','.github/workflows/shortgpt-supertest-cpu.yml']
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'English or Sinhala comedy short story idea'
+        type: string
+        required: true
+        default: 'Funny kid runs to the toilet and knocks, gets shocked, recovers'
+      planner_mode:
+        description: 'Story planner: offline or HF hosted LLM (may consume credits)'
+        type: choice
+        options: [offline, hf, gguf]
+        default: offline
+      image_mode:
+        description: 'procedural = free, hf = provider credits, cpu = local Apache-2.0 SSD-1B (slow, 16GB RAM recommended)'
+        type: choice
+        options: [procedural, hf, cpu]
+        default: procedural
+      ai_image_test:
+        description: 'Use Hugging Face AI images (requires credits and Secrets HF_TOKEN and HF_IMAGE_MODEL)'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  standalone-cpu-render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    env:
+      USER_PROMPT: ${{ inputs.prompt }}
+      RUN_AI_IMAGES: ${{ inputs.ai_image_test }}
+      IMAGE_MODE_INPUT: ${{ inputs.image_mode }}
+      CPU_IMAGE_STEPS: '9'
+      PLANNER_MODE: ${{ inputs.planner_mode }}
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      HF_IMAGE_MODEL: ${{ vars.HF_IMAGE_MODEL }}
+      HF_CHAT_MODEL: ${{ vars.HF_CHAT_MODEL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU tools (not heavy ShortGPT inference models)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg espeak-ng
+          python -m pip install -q 'Pillow>=10.3,<12' 'huggingface_hub>=0.31,<2'
+      - name: Install Qwen3 GGUF CPU engine only when selected
+        if: ${{ inputs.planner_mode == 'gguf' }}
+        run: |
+          python -m pip install --no-cache-dir 'llama-cpp-python>=0.3.16,<0.4'
+      - name: Install SSD-1B real CPU diffusion engine only when selected
+        if: ${{ inputs.image_mode == 'cpu' }}
+        run: |
+          python -m pip install --no-cache-dir 'torch==2.5.1+cpu' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install --no-cache-dir 'diffusers==0.35.2' 'transformers==4.57.1' 'accelerate==1.12.0' 'huggingface_hub>=0.34,<1' 'safetensors>=0.4' 'sentencepiece'
+      - name: Read-only Hugging Face readiness (no model inference credits)
+        run: |
+          python - <<'PY'
+          import os
+          token=os.environ.get('HF_TOKEN','')
+          model=os.environ.get('HF_IMAGE_MODEL','')
+          print('HF_TOKEN_CONFIGURED',bool(token),'HF_IMAGE_MODEL_CONFIGURED',bool(model))
+          if token:
+            from huggingface_hub import HfApi
+            try:
+              HfApi().whoami(token=token)
+              print('HF_READ_ONLY_AUTH_PASS')
+            except Exception as exc:
+              print('HF_READ_ONLY_AUTH_FAILED',type(exc).__name__)
+          PY
+      - name: Python tests and real CPU narrated video
+        run: |
+          cd shortgpt-supertest
+          python -m unittest discover -s tests -v
+          if [ -z "$USER_PROMPT" ]; then USER_PROMPT='Funny kid runs to the toilet and knocks, gets shocked, recovers'; fi
+          if [ -z "$PLANNER_MODE" ]; then PLANNER_MODE=offline; fi
+          if [ "$PLANNER_MODE" = "hf" ]; then
+            if [ -z "$HF_TOKEN" ] || [ -z "$HF_CHAT_MODEL" ]; then echo 'Missing HF_TOKEN or HF_CHAT_MODEL'; exit 2; fi
+          fi
+          IMAGE_MODE="${IMAGE_MODE_INPUT:-procedural}"
+          if [ "$RUN_AI_IMAGES" = "true" ]; then
+            if [ -z "$HF_TOKEN" ] || [ -z "$HF_IMAGE_MODEL" ]; then echo 'Missing HF_TOKEN or HF_IMAGE_MODEL'; exit 2; fi
+            IMAGE_MODE=hf
+          fi
+          python shortgpt_supertest.py --prompt "$USER_PROMPT" --planner "$PLANNER_MODE" --images "$IMAGE_MODE" --tts espeak --output output/shortgpt-cpu-demo.mp4
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json output/*.mp4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shortgpt-supertest-genuine-ffmpeg-video
+          path: |
+            shortgpt-supertest/output/*.mp4
+            shortgpt-supertest/output/*.json
+            shortgpt-supertest/output/*.png
+          retention-days: 7
+          if-no-files-found: warn
+  original-shortgpt-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Fetch exact upstream ShortGPT stable commit
+        run: |
+          git clone -q https://github.com/RayVentura/ShortGPT.git upstream-shortgpt
+          cd upstream-shortgpt
+          test "$(git rev-parse HEAD)" != ''
+          git checkout -q 3df4e0f7a422bf7386565d498bf4521a2544c614
+          python -m compileall -q shortGPT
+          echo 'ORIGINAL_SHORTGPT_CODE_SYNTAX_AUDIT_PASS'
+      - name: Install the pinned original package metadata without massive GPU weights
+        run: |
+          cd upstream-shortgpt
+          python -m pip install -q --no-deps .
+          python - <<'PY'
+          import importlib.util
+          spec=importlib.util.spec_from_file_location('shortgpt_voice_module','shortGPT/audio/voice_module.py')
+          mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+          print('ORIGINAL_SHORTGPT_VOICE_ABSTRACT_MODULE_LOADED',mod.VoiceModule.__name__)
+          print('UPSTREAM_FULL_EDITOR_NOT_IMPORTED_NO_OPTIONAL_DEPS')
+          PY

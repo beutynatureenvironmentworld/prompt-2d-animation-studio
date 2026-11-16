@@ -1,0 +1,3 @@
+Pillow>=10.3,<12
+huggingface_hub>=0.31,<2
+edge-tts>=6.1,<8

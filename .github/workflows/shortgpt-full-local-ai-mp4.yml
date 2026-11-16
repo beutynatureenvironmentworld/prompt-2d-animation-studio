@@ -1,0 +1,75 @@
+name: ShortGPT SuperTest FULL Local AI Comedy MP4 (no inference API)
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Prompt for genuine Qwen3 reasoning + SSD-1B image generation + speech + MP4'
+        required: true
+        type: string
+        default: 'A funny boy desperately runs to a locked toilet door, knocks, gets shocked and recovers'
+      image_steps:
+        description: 'SSD-1B generation quality vs CPU speed (9=quick, 14=balanced, 20=high)'
+        type: choice
+        options: ['9', '14', '20']
+        default: '14'
+permissions:
+  contents: read
+jobs:
+  real-llm-image-tts-mp4:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    env:
+      HF_HUB_DISABLE_TELEMETRY: '1'
+      CPU_IMAGE_STEPS: ${{ inputs.image_steps }}
+      COMEDY_PROMPT: ${{ inputs.prompt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Install FFmpeg and offline voice synthesis
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg espeak-ng
+          df -h .;free -h
+      - name: Install CPU-only PyTorch 2.5.1, llama.cpp, Diffusers, transformers
+        run: |
+          python -m pip install --no-cache-dir 'torch==2.5.1+cpu' --index-url https://download.pytorch.org/whl/cpu
+          CMAKE_ARGS='-DGGML_CUDA=OFF' python -m pip install --no-cache-dir \
+            'llama-cpp-python>=0.3.16,<0.4' 'diffusers==0.35.2' 'transformers==4.57.1' \
+            'accelerate==1.12.0' 'huggingface_hub>=0.34,<1' 'safetensors>=0.4' \
+            'Pillow>=10.3,<12' 'sentencepiece'
+          df -h .
+      - name: 'Full single prompt using Qwen3, SSD1B, espeak, FFmpeg'
+        run: |
+          cd shortgpt-supertest
+          if [ -z "$COMEDY_PROMPT" ]; then COMEDY_PROMPT='A funny boy desperately runs to a locked toilet door, knocks, gets shocked and recovers'; fi
+          python -m unittest discover -s tests -v
+          python shortgpt_supertest.py \
+            --prompt "$COMEDY_PROMPT" \
+            --planner gguf --images cpu --tts espeak \
+            --output output/ShortGPT_Original_Full_OpenWeights_AI.mp4
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json output/ShortGPT_Original_Full_OpenWeights_AI.mp4
+      - name: Strictly verify provenance and audio/video properties
+        run: |
+          python - <<'PY'
+          import json,subprocess
+          from pathlib import Path
+          p=Path('shortgpt-supertest/output/ShortGPT_Original_Full_OpenWeights_AI.mp4')
+          m=json.load(open(p.with_suffix('.json')))
+          streams=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries','stream=codec_name','-of','json',str(p)]))
+          codes={x['codec_name'] for x in streams['streams']}
+          assert m['planner']=='gguf' and m['image_backend']=='cpu',m
+          assert m['ai_generated_images']>=1 and m['shortgpt_upstream_engine_executed'] is False
+          assert m['actual_mp4'] is True and {'h264','aac'}<=codes
+          assert p.stat().st_size>10000
+          print('FULL_SHORTGPT_REAL_LOCAL_LLM_DIFFUSION_TTS_MP4_PASS',m['ai_generated_images'],m['duration_requested'],'seconds',p.stat().st_size,'bytes')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-shortgpt-openweights-real-ai-cartoon-video
+          path: |
+            shortgpt-supertest/output/ShortGPT_Original_Full_OpenWeights_AI.mp4
+            shortgpt-supertest/output/ShortGPT_Original_Full_OpenWeights_AI.json
+            shortgpt-supertest/output/*_ai_background_*.png
+          if-no-files-found: warn
+          retention-days: 7
