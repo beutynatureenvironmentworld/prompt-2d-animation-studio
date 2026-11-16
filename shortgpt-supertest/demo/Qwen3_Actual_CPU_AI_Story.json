@@ -1,0 +1,34 @@
+{
+  "schema": "shortgpt-supertest-v1",
+  "scenes": [
+    {
+      "action": "run",
+      "location": "toilet",
+      "duration": 1,
+      "narration": "Racing to the toilet!",
+      "image_prompt": "Bright cartoon hallway with a toilet door, boy in motion, no characters"
+    },
+    {
+      "action": "knock",
+      "location": "toilet",
+      "duration": 0.6,
+      "narration": "Knock knock!",
+      "image_prompt": "Toilet door with a single knock mark, no characters"
+    },
+    {
+      "action": "shock",
+      "location": "toilet",
+      "duration": 1,
+      "narration": "Locked!",
+      "image_prompt": "Toilet door closed, locked symbol, dim lighting, no characters"
+    },
+    {
+      "action": "recover",
+      "location": "toilet",
+      "duration": 1.8,
+      "narration": "I'll just wait...",
+      "image_prompt": "Same toilet room, boy now sitting calmly on a stool, no characters"
+    }
+  ],
+  "length": 4.4
+}
