@@ -29,6 +29,8 @@ jobs:
           grep -vE '^torch$|^torchaudio$' requirements.txt > /tmp/shortgpt-cpu-requirements.txt
           python -m pip install --no-cache-dir -r /tmp/shortgpt-cpu-requirements.txt
           python -m pip install --no-deps .
+          # Original requirements pin OpenAI 1.37.0 but upstream setup.py requires 1.37.2.
+          python -m pip install --no-cache-dir openai==1.37.2
           python -m pip check
       - name: Import actual ContentShortEngine and VoiceModule (no paid calls)
         run: |
