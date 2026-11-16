@@ -1,0 +1,101 @@
+name: EXPERIMENT - FAST 2D clear arm and leg motion with Iki, LineArt and Rhubarb
+on:
+  push:
+    branches: [feature/fast-clear-ik-iki-rhubarb-action]
+    paths: ['fast-action/**','.github/workflows/fast-clear-limb-demo.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  original-fast-2d:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install lightweight CPU 2D image and video dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install --quiet 'Pillow>=10,<12'
+          python -m py_compile fast-action/fast_action.py
+      - name: Download genuine Iki auto-rig WebGL facial keyframes
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 43787114551
+          repository: beutynatureenvironmentworld/prompt-2d-animation-studio
+          github-token: ${{ github.token }}
+          name: separate-iki-real-auto-rig-and-rendered-poses
+          path: fast-action/stage/iki
+      - name: Download original Rhubarb audio-driven A-H mouth cues and WAV
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 43764399085
+          repository: beutynatureenvironmentworld/prompt-2d-animation-studio
+          github-token: ${{ github.token }}
+          name: rhubarb-original-2d-voice-lipsync-demo
+          path: fast-action/stage/rhubarb
+      - name: Verify source art, prepare isolated editable animation workspace
+        run: |
+          mkdir -p fast-action/assets fast-action/output
+          cp fast-action/stage/iki/output/iki/iki-poses/face_*.png fast-action/assets/
+          cp fast-action/stage/rhubarb/rhubarb-mouth-cues.json fast-action/assets/
+          cp fast-action/stage/rhubarb/original-dialogue.wav fast-action/assets/
+          test "$(find fast-action/assets -name 'face_*.png' | wc -l)" -eq 24
+          python - <<'PY'
+          import json
+          d=json.load(open('fast-action/assets/rhubarb-mouth-cues.json'))
+          assert len(d['mouthCues'])>=6
+          print('REAL_IKI_24_AND_RHUBARB_CUES_VERIFIED',len(d['mouthCues']))
+          PY
+      - name: Execute real upstream Line-Art Animation gait.ts IK solver
+        run: |
+          git clone -q --depth 1 https://github.com/JDhruv14/line-art-animation.git "$RUNNER_TEMP/lineart"
+          cp fast-action/generate_gait.mjs "$RUNNER_TEMP/lineart/vidbest-action-demo.mjs"
+          GAIT_OUT="$GITHUB_WORKSPACE/fast-action/output/real-lineart-gait.json" node --experimental-strip-types "$RUNNER_TEMP/lineart/vidbest-action-demo.mjs"
+      - name: Produce independent fast animated arms legs, expressions, actual lip-sync and MP4
+        run: |
+          python -u fast-action/fast_action.py
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json fast-action/output/fast-clear-limb-motion.mp4
+      - name: Confirm distinct poses, actual upstream IK, Iki, Rhubarb and no diffusion claim
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('fast-action/output/actual-video-proof.json')
+          d=json.loads(p.read_text())
+          assert d['real_joint_animation'] and d['lineart_library_gait']
+          assert d['iki_face_poses_used']==24
+          assert len(d['rhubarb_cue_values_used'])>=3
+          assert not d['gpu_diffusion_generated_video']
+          assert Path(d['mp4']).stat().st_size>65000
+          print('REAL_FAST_LIMB_IKI_LINEART_RHUBARB_MP4_PASS')
+          PY
+          ffmpeg -hide_banner -loglevel error -y -ss 1.50 -i fast-action/output/fast-clear-limb-motion.mp4 -frames:v 1 fast-action/output/pose_run.png
+          ffmpeg -hide_banner -loglevel error -y -ss 4.50 -i fast-action/output/fast-clear-limb-motion.mp4 -frames:v 1 fast-action/output/pose_talk.png
+          ffmpeg -hide_banner -loglevel error -y -ss 8.30 -i fast-action/output/fast-clear-limb-motion.mp4 -frames:v 1 fast-action/output/pose_slip.png
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          hs=[hashlib.sha256(p.read_bytes()).digest() for p in Path('fast-action/output').glob('pose_*.png')]
+          assert len(hs)==3 and len(set(hs))==3
+          print('THREE_DISTINCT_FULL_BODY_2D_POSES_PASS')
+          PY
+      - name: Upload verified original 12-second moving 2D comedy and provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEW-fast-clear-IK-Iki-Rhubarb-original-action-demo
+          path: |
+            fast-action/output/fast-clear-limb-motion.mp4
+            fast-action/output/actual-video-proof.json
+            fast-action/output/real-lineart-gait.json
+            fast-action/output/pose_*.png
+          retention-days: 7
+          if-no-files-found: warn
