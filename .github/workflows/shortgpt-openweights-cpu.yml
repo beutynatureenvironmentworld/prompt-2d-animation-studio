@@ -1,10 +1,5 @@
 name: ShortGPT SuperTest REAL Open-Weights CPU AI (Qwen3 + SSD-1B)
 on:
-  push:
-    branches: [experiment/shortgpt-supertest-hf-oracle]
-    paths:
-      - 'shortgpt-supertest/models/**'
-      - '.github/workflows/shortgpt-openweights-cpu.yml'
   workflow_dispatch:
 permissions:
   contents: read
