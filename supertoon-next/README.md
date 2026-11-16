@@ -1,0 +1,49 @@
+# SuperToon Next — Funny Toon Ever / Prompt → Original Vector Cartoon MP4
+
+Independent experimental sequel to the **cat Super Test** (5–6s, 960×540, 24fps) and the successful human running test. None of the previous InkRig, Snap2D, CPU/GPU workflows have been modified. Uses the same practical ideas: readable silhouettes, independently moving arm/leg joints, sprinting, bouncing, squash/stretch, reaction cuts, speed lines, camera pan/zoom, and short original synthetic SFX.
+
+## One-prompt workflow (no API key; no GPU)
+
+```bash
+sudo apt-get install -y ffmpeg python3-cairo
+./run.sh 'Funny boy rushes to the toilet, knocks, then slips and recovers'
+```
+
+Generates `out/custom-funny-short.mp4`, H.264/AAC with JSON provenance. English and Sinhala action words supported.
+
+```bash
+/usr/bin/python3 src/render.py --prompt 'පූසා ගෙවත්තේ දුවලා පැනලා බය වෙනවා' --ratio 9:16 --duration 9 --output out/cat.mp4
+/usr/bin/python3 src/render.py --prompt 'Robot dances in school, jumps and laughs' --ratio 16:9 --duration 7 --output out/robot.mp4
+```
+
+**Original code-drawn vector art, not AI-generated new paintings:** each frame recalculates facial expression, knees/ankles, arms/elbows, camera composition, and props. Independent character designs: boy/girl, cat, robot, monochrome mascot. Built-in environments: toilet, park/garden, school, street, bedroom, kitchen, office. Built-in actions: notice, sprint, jump, knock, point, speak, slip, panic, laugh, recover, dance, wave. 24 fps portrait 432×768 (draft), 648×1152 (HD) and landscape/social-square modes. No externally hosted AI is needed, so this works within free GitHub Actions CPU or an isolated Oracle 1-GB VPS. Both hardware speeds vary; benchmark the particular instance.
+
+## AI-based scene reasoning (optional, not enabled by default)
+
+The offline planner is a bounded Sinhala/English rule-based interpreter, **not a general-purpose LLM**. For more sophisticated storytelling, opt into `src/llm_plan.py`, pointed at an OpenAI-compatible HTTP server (for example locally running `llama.cpp` with Qwen GGUF), or an explicitly configured external HTTPS LLM endpoint. Schema-validate its JSON before rendering; never execute arbitrary source code from a language model. This optional adapter is supplied, but no successful AI planning inference is claimed without an actual inference test.
+
+```bash
+export STORY_LLM_BASE=http://127.0.0.1:8080
+export STORY_LLM_MODEL=local
+/usr/bin/python3 src/llm_plan.py 'Funny cat jumps away from a falling ball' --out out/ai-plan.json
+/usr/bin/python3 src/render.py --plan out/ai-plan.json --output out/from-ai.mp4
+```
+
+**No key needed for the offline engine or an existing local llama.cpp server.** For a remote compatible endpoint use `STORY_LLM_BASE`, `STORY_LLM_MODEL`, and optional `STORY_LLM_API_KEY` via GitHub Actions Secrets / Oracle environment (never commit or paste credentials). Remote providers may have quotas/costs. Hugging Face's inference credit is small and free ZeroGPU uses queues/daily quotas, not guaranteed unlimited inference.
+
+## Cost and infrastructure separation
+
+The tested local rendering is CPU-only. A full content understanding model and novel characters/actions remain bounded by written templates until new assets/motion routines and AI planning are explicitly enabled and verified. `src/llm_plan.py` only selects allowed scenes; it cannot create truly arbitrary rigs from a text prompt. Do **not** promise professional frame-by-frame anime or unlimited 1080p throughput.
+
+The Oracle connector can operate on an AI host containing ~952 MiB RAM and an existing 469 MiB GGUF; **do not run an aggressive heavy model there while production services are active.** Other production VidBest services remain untouched. GitHub workflow renders on a temporary CPU runner and uploads a 7-day artifact; save important videos persistently (e.g., GitHub release assets or user-owned HF storage) separately.
+
+## Code and security
+
+- `src/plan.py` — bounded deterministic prompt → JSON action sequence; validates duration, setting, character, action and positions.
+- `src/draw.py` — 2D Cairo original environment/character painter; live 2-bone IK joint movements; snap reaction shots.
+- `src/render.py` — safe subprocess FFmpeg H.264/AAC streaming, short custom sounds, optional voice-file import, ffprobe.
+- `src/llm_plan.py` — opt-in OpenAI-compatible JSON-only LLM request, checked against the same schema. No arbitrary source execution.
+- `tests/test_supertoon.py` — vocabulary, timelining, IK, character and invalid action checks.
+- `.github/workflows/supertoon-next.yml` — manually triggered prompt-based Actions MP4 workflow with checks and downloadable artifact.
+
+**No copyright-protected character or video copied**: use owner-provided Super Test only as a motion/timing benchmark. New vector art is original. Export to TikTok/YouTube after checking music rights/third-party asset licenses; default synthetic SFX are generated by code, not licensed songs.

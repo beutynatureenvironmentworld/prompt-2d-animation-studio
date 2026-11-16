@@ -1,0 +1,73 @@
+name: SuperToon Next - prompt to original funny short
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Describe a funny animation (Sinhala or English)'
+        required: true
+        default: 'ටොයිලට් එකට දුවලා දොරට තට්ටු කරලා බය වෙලා ලිස්සලා වැටෙන විහිළුවක්'
+        type: string
+      ratio:
+        description: 'Social video aspect ratio'
+        type: choice
+        options: ['9:16','16:9','1:1']
+        default: '9:16'
+      duration:
+        description: 'Length, 2 to 18 seconds'
+        type: choice
+        options: ['6','9','12','15']
+        default: '9'
+  push:
+    branches: ['experiment/supertoon-next-prompts']
+    paths:
+      - 'supertoon-next/**'
+      - '.github/workflows/supertoon-next.yml'
+permissions:
+  contents: read
+concurrency:
+  group: supertoon-next-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  cpu-animated-short:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      USER_PROMPT: ${{ github.event.inputs.prompt }}
+      VIDEO_RATIO: ${{ github.event.inputs.ratio }}
+      DURATION: ${{ github.event.inputs.duration }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install lightweight open-source CPU vector and video renderers
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg python3-cairo
+          /usr/bin/python3 -c 'import cairo;print("PYCAIRO_INSTALLED",cairo.version)'
+      - name: Run deterministic planner safety, scene and IK checks
+        run: |
+          cd supertoon-next
+          /usr/bin/python3 -m unittest discover -s tests -v
+      - name: Compile original prompt and stream 24 FPS rendered video to MP4
+        run: |
+          cd supertoon-next
+          : "${USER_PROMPT:=Funny boy runs to a toilet and knocks then slips and recovers}"
+          : "${VIDEO_RATIO:=9:16}"
+          : "${DURATION:=9}"
+          /usr/bin/python3 src/render.py --prompt "$USER_PROMPT" --ratio "$VIDEO_RATIO" --duration "$DURATION" --output out/GitHub_Funny_Toon_Custom_Prompt.mp4
+      - name: Probe real H264 AAC MP4 output and scene changes
+        run: |
+          cd supertoon-next
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json out/GitHub_Funny_Toon_Custom_Prompt.mp4
+          test "$(stat -c%s out/GitHub_Funny_Toon_Custom_Prompt.mp4)" -gt 20000
+      - name: Download actual MP4, prompt plan and technical proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: supertoon-next-original-code-drawn-mp4
+          path: |
+            supertoon-next/out/*.mp4
+            supertoon-next/out/*.json
+          if-no-files-found: warn
+          retention-days: 7
