@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Extract complete editable studio source
-        run: unzip -q prompt-to-code/Source_Project.zip -d prompt-to-code
+        run: unzip -oq prompt-to-code/Source_Project.zip -d prompt-to-code
       - name: Install actual CairoSVG Pillow OpenCV MoviePy FFmpeg
         run: |
           sudo apt-get update -qq
@@ -69,7 +69,7 @@ jobs:
         env:
           USER_PROMPT: ${{ github.event.inputs.prompt }}
         run: |
-          unzip -q prompt-to-code/Source_Project.zip -d prompt-to-code
+          unzip -oq prompt-to-code/Source_Project.zip -d prompt-to-code
           cd prompt-to-code
           if [ -n "$USER_PROMPT" ]; then
             python -c 'import os,json; p="shared/prompt.json";d=json.load(open(p));d["prompt"]=os.environ["USER_PROMPT"];json.dump(d,open(p,"w"),ensure_ascii=False)'
@@ -102,7 +102,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg nscd
-          unzip -q prompt-to-code/Source_Project.zip -d prompt-to-code
+          unzip -oq prompt-to-code/Source_Project.zip -d prompt-to-code
       - name: Install Revideo renderer and actually render Canvas MP4
         run: |
           cd prompt-to-code/revideo
