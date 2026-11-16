@@ -70,4 +70,21 @@ class QualityWarnings(unittest.TestCase):
         warnings=review_plan(story)
         self.assertFalse(any('cut off' in w for w in warnings))
 
+class ReadablePacingTests(unittest.TestCase):
+    def test_short_script_is_readable_and_remains_valid(self):
+        from pacing import make_readable
+        from shortgpt_supertest import safe_plan, offline_plan
+        p=offline_plan('A kid runs to the toilet, knocks, gets shocked, and recovers')
+        q=safe_plan(make_readable(p))
+        self.assertGreaterEqual(q['length'],8)
+        self.assertLessEqual(q['length'],12)
+        self.assertTrue(all(.6<=s['duration']<=3 for s in q['scenes']))
+
+    def test_long_voice_gets_extra_scene_time(self):
+        from pacing import make_readable
+        p={'scenes':[{'action':'shock','duration':.7,'narration':'That is not what I expected at all'},
+                     {'action':'recover','duration':1.0,'narration':'Oops!'}],'length':1.7}
+        q=make_readable(p)
+        self.assertGreater(q['scenes'][0]['duration'],.7)
+
 if __name__=='__main__':unittest.main()
