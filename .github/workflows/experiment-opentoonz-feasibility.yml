@@ -1,0 +1,35 @@
+name: EXPERIMENT OpenToonz CPU feasibility (one bounded run)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  opentoonz-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect distro package availability and renderer commands
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p puppet-lab/output/opentoonz
+          sudo apt-get update -qq
+          { apt-cache policy opentoonz tahoma2d || true; apt-cache search '^opentoonz|^tahoma2d' || true; } | tee puppet-lab/output/opentoonz/packages.txt
+          if apt-cache show opentoonz >/dev/null 2>&1; then
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq opentoonz ffmpeg xvfb
+            command -v opentoonz || true
+            command -v tcomposer || true
+            command -v tcleanup || true
+            timeout 20s xvfb-run -a bash -c 'command -v tcomposer && tcomposer -help' > puppet-lab/output/opentoonz/renderer-help.txt 2>&1 || true
+            echo 'OPEN_TOONZ_PACKAGE_AVAILABLE' | tee puppet-lab/output/opentoonz/result.txt
+          else
+            echo 'OPEN_TOONZ_NOT_IN_UBUNTU_2404_APT; do not claim engine installed or MP4 rendered' | tee puppet-lab/output/opentoonz/result.txt
+          fi
+      - name: Upload exact feasibility evidence, no fabricated video
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opentoonz-cpu-install-feasibility-report
+          path: puppet-lab/output/opentoonz/
+          retention-days: 7
