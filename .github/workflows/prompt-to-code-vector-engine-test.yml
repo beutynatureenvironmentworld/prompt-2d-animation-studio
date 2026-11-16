@@ -78,6 +78,8 @@ jobs:
           cp shared/scene.json remotion/src/scene.json
       - name: Install Remotion and actually render its React SVG MP4
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
           cd prompt-to-code/remotion
           npm install --no-audit --no-fund
           npm run render
