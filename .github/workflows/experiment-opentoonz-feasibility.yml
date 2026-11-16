@@ -1,5 +1,8 @@
 name: EXPERIMENT OpenToonz CPU feasibility (one bounded run)
 on:
+  push:
+    branches: [experiment/iki-blender-prompt-puppet-20261116]
+    paths: ['.github/workflows/experiment-opentoonz-feasibility.yml']
   workflow_dispatch:
 permissions:
   contents: read
