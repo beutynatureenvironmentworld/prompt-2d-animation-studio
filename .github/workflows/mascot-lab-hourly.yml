@@ -92,7 +92,7 @@ jobs:
           HOUR=$(date -u +%H)
           SOURCE_SHA=$(sha256sum mascot-lab/config/permanent_mascot.webp | cut -d' ' -f1)
           PREVIOUS_SOURCE_SHA=$(git show HEAD:mascot-lab/out/LATEST_SOURCE_SHA256.txt 2>/dev/null || true)
-          printf '%s\\n' "$SOURCE_SHA" > mascot-lab/out/LATEST_SOURCE_SHA256.txt
+          echo "$SOURCE_SHA" > mascot-lab/out/LATEST_SOURCE_SHA256.txt
           git add -f mascot-lab/out/LATEST_SOURCE_SHA256.txt
           if [ "$SOURCE_SHA" != "$PREVIOUS_SOURCE_SHA" ] || ! git ls-files --error-unmatch mascot-lab/out/LATEST_VERIFIED.mp4 >/dev/null 2>&1; then
             git add -f mascot-lab/out/LATEST_VERIFIED.mp4 mascot-lab/out/LATEST_FRAMES.jpg
