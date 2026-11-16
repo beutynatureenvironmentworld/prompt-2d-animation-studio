@@ -2,7 +2,7 @@ name: EXPERIMENT - Iki real auto-rig vs Blender 2D skeleton motion
 on:
   push:
     branches: [experiment/iki-blender-prompt-puppet-20261116]
-    paths: ['puppet-lab/**','.github/workflows/experiment-iki-blender-puppet.yml']
+    paths: ['puppet-lab/iki_trial.mjs','puppet-lab/iki_pose_video.py','puppet-lab/blender_armature.py','puppet-lab/prompt_to_motion.py','.github/workflows/experiment-iki-blender-puppet.yml']
   workflow_dispatch:
 permissions:
   contents: read
