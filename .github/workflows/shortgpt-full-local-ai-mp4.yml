@@ -1,8 +1,5 @@
 name: ShortGPT SuperTest FULL Local AI Comedy MP4 (no inference API)
 on:
-  push:
-    branches: [experiment/shortgpt-supertest-hf-oracle]
-    paths: ['.github/workflows/shortgpt-full-local-ai-mp4.yml']
   workflow_dispatch:
     inputs:
       prompt:
@@ -10,6 +7,11 @@ on:
         required: true
         type: string
         default: 'A funny boy desperately runs to a locked toilet door, knocks, gets shocked and recovers'
+      image_steps:
+        description: 'SSD-1B generation quality vs CPU speed (9=quick, 14=balanced, 20=high)'
+        type: choice
+        options: ['9', '14', '20']
+        default: '14'
 permissions:
   contents: read
 jobs:
@@ -18,7 +20,7 @@ jobs:
     timeout-minutes: 70
     env:
       HF_HUB_DISABLE_TELEMETRY: '1'
-      CPU_IMAGE_STEPS: '9'
+      CPU_IMAGE_STEPS: ${{ inputs.image_steps }}
       COMEDY_PROMPT: ${{ inputs.prompt }}
     steps:
       - uses: actions/checkout@v4
@@ -68,5 +70,6 @@ jobs:
           path: |
             shortgpt-supertest/output/ShortGPT_Original_Full_OpenWeights_AI.mp4
             shortgpt-supertest/output/ShortGPT_Original_Full_OpenWeights_AI.json
+            shortgpt-supertest/output/*_ai_background_*.png
           if-no-files-found: warn
           retention-days: 7
