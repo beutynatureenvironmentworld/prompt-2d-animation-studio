@@ -169,6 +169,7 @@ def frame_at(t,timeline,poses,base,font,w,h):
 fps_global=24
 
 def render(plan,output,width=960,height=540,verify=True):
+    output=Path(output).resolve()
     if not shutil.which('ffmpeg'):raise EnvironmentError('ffmpeg missing')
     start=time.perf_counter()
     poses=load_pose()
