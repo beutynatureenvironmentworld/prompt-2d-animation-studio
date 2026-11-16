@@ -18,6 +18,7 @@ SYSTEM=(
  '"beats":[{"action":"notice|sprint|jump|knock|point|speak|slip|panic|laugh|recover|dance|wave",'
  '"start":0,"end":1}, ...],"fps":24}. '
  'Use actions to tell a coherent joke. Timeline must be contiguous, no overlaps, and end at duration. '
+ 'Optional `props` array (0..12) can create original vector objects including any new prop: kind=rect|ellipse|line|polygon|star|text, x,y,w,h,fill=#RRGGBB,stroke=#RRGGBB,layer=back|front, motions=[{t,dx,dy,angle,scale}]. All fields numeric except names/colors/text. No scripts. '
  'Return at most 12 action beats. No executable code, no markdown. '
  'Cartoon character must move with distinct poses; most frames show a neutral mouth.'
 )

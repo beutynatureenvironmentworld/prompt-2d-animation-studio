@@ -271,6 +271,8 @@ def draw_frame(c,plan,t,w,h):
     c.save();c.scale(base_scale,base_scale)
     c.translate(visible_w/2-camera_x,(visible_h-360)/2)
     background(c,setting,t)
+    from props import draw_props
+    draw_props(c,plan.get('props',[]),t,'back')
     # impact cut and shaky camera rather than whole-frame blur artifacts
     if action in ('panic','slip') and .1<z<.8:
         shake=2.5*math.sin(t*TAU*13)
@@ -281,6 +283,7 @@ def draw_frame(c,plan,t,w,h):
     else:draw_human(c,t,action,z,tilt,phase,kind)
     c.restore()
     punch_fx(c,t,action,x,y,z,phase)
+    draw_props(c,plan.get('props',[]),t,'front')
     c.restore()
     # screen space tiny branding; avoid overlay on body
     col(c,'#172a2c',.82)

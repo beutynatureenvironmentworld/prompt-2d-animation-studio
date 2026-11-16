@@ -69,6 +69,9 @@ def validate(plan):
         if abs(start-last)>0.04 or end<=start or end>duration+.04:raise ValueError('Invalid timeline')
         last=end
     if abs(last-duration)>.04:raise ValueError('Timeline must fill duration')
+    if 'props' in plan:
+        from props import validate_props
+        validate_props(plan['props'],duration)
     return plan
 
 def compile_story(prompt,duration=9.0,ratio='9:16',style='super-test'):

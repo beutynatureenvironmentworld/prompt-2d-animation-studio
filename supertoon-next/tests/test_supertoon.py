@@ -32,3 +32,19 @@ class Tests(unittest.TestCase):
   with self.assertRaises(ValueError):compile_story('hi')
 
 if __name__=='__main__':unittest.main()
+
+class VectorPropsTests(unittest.TestCase):
+ def test_safe_flying_prop_is_accepted(self):
+  from props import validate_props,motion_at
+  props=[{'kind':'ellipse','x':300,'y':125,'w':80,'h':80,'fill':'#ff9933',
+    'motions':[{'t':0,'dx':150,'dy':0,'angle':0,'scale':1},{'t':7,'dx':-170,'dy':-20,'angle':200,'scale':1.1}]}]
+  self.assertEqual(len(validate_props(props,8)),1)
+  self.assertNotEqual(motion_at(props[0]['motions'],2)['dx'],motion_at(props[0]['motions'],5)['dx'])
+ def test_reject_javascript_in_json(self):
+  from props import validate_props
+  with self.assertRaises(ValueError):
+   validate_props([{'kind':'rect','x':4,'y':4,'w':10,'h':10,'onClick':'evil()'}],5)
+ def test_reject_remote_resource_field(self):
+  from props import validate_props
+  with self.assertRaises(ValueError):
+   validate_props([{'kind':'rect','x':4,'y':4,'w':10,'h':10,'url':'http://example.com/x'}],5)

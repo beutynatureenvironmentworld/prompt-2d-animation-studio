@@ -18,7 +18,7 @@ on:
         options: ['6','9','12','15']
         default: '9'
   push:
-    branches: ['experiment/supertoon-next-prompts']
+    branches: ['experiment/supertoon-next-prompts', 'experiment/supertoon-ai-vector-props']
     paths:
       - 'supertoon-next/**'
       - '.github/workflows/supertoon-next.yml'
@@ -56,6 +56,10 @@ jobs:
           : "${VIDEO_RATIO:=9:16}"
           : "${DURATION:=9}"
           /usr/bin/python3 src/render.py --prompt "$USER_PROMPT" --ratio "$VIDEO_RATIO" --duration "$DURATION" --output out/GitHub_Funny_Toon_Custom_Prompt.mp4
+      - name: Test new animated vector props with original flying-donut story
+        run: |
+          cd supertoon-next
+          /usr/bin/python3 src/render.py --plan examples/flying_donut.json --quality low --output out/GitHub_Original_Flying_Donut_Scene.mp4
       - name: Probe real H264 AAC MP4 output and scene changes
         run: |
           cd supertoon-next
