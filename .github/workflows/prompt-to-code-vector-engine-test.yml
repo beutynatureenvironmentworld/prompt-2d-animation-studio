@@ -1,0 +1,119 @@
+name: EXPERIMENT Prompt-to-Code SVG Remotion Revideo Video Render
+on:
+  push:
+    branches: [experiment/prompt-to-code-svg-remotion-revideo]
+    paths: ['prompt-to-code/**', '.github/workflows/prompt-to-code-vector-engine-test.yml']
+  workflow_dispatch:
+    inputs:
+      prompt:
+        type: string
+        required: true
+        description: 'English/Sinhala original 2D cartoon story prompt'
+        default: 'ටොයිලට් එකට දුවගෙන ගිහින් දොරට තට්ටු කරන 2D විහිළු වීඩියෝවක් හදන්න'
+permissions:
+  contents: read
+jobs:
+  python-cairo:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract complete editable studio source
+        run: unzip -q prompt-to-code/Source_Project.zip -d prompt-to-code
+      - name: Install actual CairoSVG Pillow OpenCV MoviePy FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg libcairo2
+          python -m pip install -q -r prompt-to-code/python/requirements.txt
+      - name: Prompt to safe motion JSON and tests
+        env:
+          USER_PROMPT: ${{ github.event.inputs.prompt }}
+        run: |
+          cd prompt-to-code
+          if [ -n "$USER_PROMPT" ]; then
+            python -c 'import os,json; p="shared/prompt.json";d=json.load(open(p));d["prompt"]=os.environ["USER_PROMPT"];json.dump(d,open(p,"w"),ensure_ascii=False)'
+          fi
+          python python/compile_prompt.py
+          python -m unittest discover -s tests -v
+      - name: Render genuine new vector-drawn H264 and AAC MP4
+        run: |
+          cd prompt-to-code
+          python python/render_svg.py --plan shared/scene.json --output output/python-svg-toon.mp4
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json output/python-svg-toon.mp4
+          test -s output/python-svg-toon.mp4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: python-cairosvg-code-drawn-toon-video
+          path: |
+            prompt-to-code/output/python-svg-toon.mp4
+            prompt-to-code/output/python-svg-toon.json
+            prompt-to-code/shared/scene.json
+          retention-days: 7
+          if-no-files-found: warn
+  remotion-react:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Extract Studio and generate common prompt timeline
+        env:
+          USER_PROMPT: ${{ github.event.inputs.prompt }}
+        run: |
+          unzip -q prompt-to-code/Source_Project.zip -d prompt-to-code
+          cd prompt-to-code
+          if [ -n "$USER_PROMPT" ]; then
+            python -c 'import os,json; p="shared/prompt.json";d=json.load(open(p));d["prompt"]=os.environ["USER_PROMPT"];json.dump(d,open(p,"w"),ensure_ascii=False)'
+          fi
+          python python/compile_prompt.py
+          cp shared/scene.json remotion/src/scene.json
+      - name: Install Remotion and actually render its React SVG MP4
+        run: |
+          cd prompt-to-code/remotion
+          npm install --no-audit --no-fund
+          npm run render
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json out/toon-remotion.mp4
+          test -s out/toon-remotion.mp4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: remotion-react-vector-video
+          path: prompt-to-code/remotion/out/*.mp4
+          retention-days: 7
+          if-no-files-found: warn
+  revideo-canvas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install FFmpeg nscd and unpack complete Revideo source
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg nscd
+          unzip -q prompt-to-code/Source_Project.zip -d prompt-to-code
+      - name: Install Revideo renderer and actually render Canvas MP4
+        run: |
+          cd prompt-to-code/revideo
+          npm install --no-audit --no-fund
+          npm run render
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json out/toon-revideo.mp4
+          test -s out/toon-revideo.mp4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: revideo-ts-canvas-original-video
+          path: prompt-to-code/revideo/out/*.mp4
+          retention-days: 7
+          if-no-files-found: warn
