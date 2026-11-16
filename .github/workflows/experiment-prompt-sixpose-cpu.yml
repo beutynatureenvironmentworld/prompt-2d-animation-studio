@@ -40,6 +40,7 @@ jobs:
           PY
       - name: Extract six original individual cutout poses, not overlaid face layers
         run: |
+          mkdir -p prompt-sixpose/output
           cp prompt-sixpose/assets/six_pose_sheet_for_git.png prompt-sixpose/assets/official_six_pose_sheet.png
           python -u prompt-sixpose/src/prepare_poses.py
       - name: Execute four offline Python tests
