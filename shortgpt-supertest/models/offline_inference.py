@@ -122,7 +122,7 @@ def main():
     a=p.parse_args()
     if a.job=="story":
         notes_file=Path(a.notes_file) if a.notes_file else None
-        if notes_file and notes_file.stat().st_size>6500:raise ValueError("Creative notes file too large")
+        if notes_file and notes_file.stat().st_size>20000:raise ValueError("Creative notes file too large")
         notes=notes_file.read_text(encoding="utf-8") if notes_file else ""
         create_story(a.prompt,Path(a.output),a.max_tokens,notes)
     else:
