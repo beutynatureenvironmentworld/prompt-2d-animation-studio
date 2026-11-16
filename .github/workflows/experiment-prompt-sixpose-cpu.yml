@@ -1,0 +1,94 @@
+name: EXPERIMENT - Custom prompt to B&W mascot six-pose animation (CPU)
+on:
+  push:
+    branches: [experiment/custom-prompt-six-pose-cpu]
+    paths:
+      - 'prompt-sixpose/**'
+      - '.github/workflows/experiment-prompt-sixpose-cpu.yml'
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'English or Sinhala actions: crouch, run, knock, jump, shock, slip, recover'
+        required: true
+        type: string
+        default: 'The mascot crouches, runs, knocks at the door, gets shocked and recovers'
+permissions:
+  contents: read
+concurrency:
+  group: sixpose-cpu-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  original-six-pose-video:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    env:
+      USER_PROMPT: ${{ github.event.inputs.prompt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install actual PIL OpenCV MoviePy FFmpeg CPU tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install -q -r prompt-sixpose/requirements.txt
+          python -m py_compile prompt-sixpose/src/*.py
+          python - <<'PY'
+          import cv2, PIL, moviepy
+          print('ACTUAL_CPU_TOOLS',cv2.__version__,PIL.__version__,moviepy.__version__)
+          PY
+      - name: Extract six original individual cutout poses, not overlaid face layers
+        run: |
+          cp prompt-sixpose/assets/six_pose_sheet_for_git.png prompt-sixpose/assets/official_six_pose_sheet.png
+          python -u prompt-sixpose/src/prepare_poses.py
+      - name: Execute four offline Python tests
+        run: python -m unittest discover -s prompt-sixpose/tests -v
+      - name: Compile arbitrary Sinhala or English user prompt to validated JSON
+        run: |
+          if [ -z "$USER_PROMPT" ]; then
+            USER_PROMPT='The mascot crouches, runs fast, knocks the door, gets shocked, then recovers'
+          fi
+          python prompt-sixpose/src/prompt_to_json.py \
+            --prompt "$USER_PROMPT" \
+            --output prompt-sixpose/output/custom-prompt-timeline.json
+          python - <<'PY'
+          import json
+          p=json.load(open('prompt-sixpose/output/custom-prompt-timeline.json'))
+          assert p['compiler']=='offline-keyword-rules'
+          assert 1<=len(p['actions'])<=20
+          print('OFFLINE_CUSTOM_PROMPT_ACTIONS',[(v['action'],v['duration']) for v in p['actions']])
+          PY
+      - name: Render actual original six-pose cartoon H264/AAC MP4 on CPU
+        run: |
+          python -u prompt-sixpose/src/render.py \
+            --timeline prompt-sixpose/output/custom-prompt-timeline.json \
+            --output prompt-sixpose/output/Funny_Toon_Ever_Custom_Prompt_CPU.mp4 \
+            --width 960 --height 540
+      - name: Verify MP4 and provenance without GPU or full-rig claims
+        run: |
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json \
+            prompt-sixpose/output/Funny_Toon_Ever_Custom_Prompt_CPU.mp4
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          p=Path('prompt-sixpose/output/Funny_Toon_Ever_Custom_Prompt_CPU.mp4')
+          j=json.load(open(p.with_suffix('.json')))
+          assert p.stat().st_size>50000
+          assert j['video_verified_with_moviepy'] is True
+          assert j['source_pose_images']==6 and j['not_a_rig'] and j['not_gpu_video_generation']
+          print('GITHUB_ACTIONS_REAL_SIX_POSE_CPU_MP4_VERIFIED',p.stat().st_size,'bytes')
+          PY
+      - name: Downloadable real MP4, pose previews, JSON and benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-funny-toon-custom-prompt-sixpose-cpu
+          path: |
+            prompt-sixpose/output/Funny_Toon_Ever_Custom_Prompt_CPU.mp4
+            prompt-sixpose/output/Funny_Toon_Ever_Custom_Prompt_CPU.jpg
+            prompt-sixpose/output/Funny_Toon_Ever_Custom_Prompt_CPU.json
+            prompt-sixpose/output/custom-prompt-timeline.json
+            prompt-sixpose/output/real_six_extracted_poses.jpg
+          retention-days: 7
+          if-no-files-found: warn
