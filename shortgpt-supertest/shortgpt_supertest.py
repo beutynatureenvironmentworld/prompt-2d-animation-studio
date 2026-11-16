@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 import urllib.request
 import io
+import sys
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 FRAME_W, FRAME_H, FPS = 360, 640, 18
@@ -99,6 +100,13 @@ def _post_chat(messages: list[dict], endpoint: str, model: str, token: str | Non
 
 def llm_plan(prompt:str,mode:str) -> dict:
     if mode=='offline':return offline_plan(prompt)
+    if mode=='gguf':
+        with tempfile.TemporaryDirectory(prefix='qwen-story-') as folder:
+            path=Path(folder)/'story.json'
+            script=Path(__file__).resolve().parent/'models'/'offline_inference.py'
+            subprocess.run([sys.executable,str(script),'story','--prompt',prompt[:500],
+                            '--output',str(path)],timeout=750,check=True)
+            return safe_plan(json.loads(path.read_text()))
     if mode=='local':
         endpoint=os.environ.get('LOCAL_LLM_CHAT_URL','http://127.0.0.1:8080/v1/chat/completions')
         model=os.environ.get('LOCAL_LLM_MODEL','local-model')
@@ -150,6 +158,16 @@ def procedural_background(place: str) -> Image.Image:
 
 def hf_background(scene:dict, mode:str):
     if mode=='procedural':return procedural_background(scene['location']),False
+    if mode=='cpu':
+        with tempfile.TemporaryDirectory(prefix='ssd-image-') as folder:
+            image_path=Path(folder)/'background.png'
+            script=Path(__file__).resolve().parent/'models'/'offline_inference.py'
+            subprocess.run([sys.executable,str(script),'image','--prompt',scene['image_prompt'],
+                 '--output',str(image_path),'--steps',os.environ.get('CPU_IMAGE_STEPS','9')],
+                 timeout=2400,check=True)
+            from PIL import ImageOps
+            with Image.open(image_path) as image:
+                return ImageOps.fit(image.convert('RGB'),(FRAME_W,FRAME_H)),True
     if mode!='hf':raise PipelineError('Unknown image mode')
     token=os.environ.get('HF_TOKEN');model=os.environ.get('HF_IMAGE_MODEL')
     if not token or not model:raise PipelineError('HF_TOKEN and HF_IMAGE_MODEL are required for AI images')
@@ -304,8 +322,8 @@ def run(prompt:str,output:Path,planner:str='offline',images:str='procedural',tts
 if __name__=='__main__':
     p=argparse.ArgumentParser(description='Create AI-ready funny 2D Shorts with CPU video composition')
     p.add_argument('--prompt',default='Funny kid runs to the toilet and knocks on the door then gets shocked and recovers')
-    p.add_argument('--planner',choices=['offline','local','hf'],default='offline')
-    p.add_argument('--images',choices=['procedural','hf'],default='procedural')
+    p.add_argument('--planner',choices=['offline','local','hf','gguf'],default='offline')
+    p.add_argument('--images',choices=['procedural','hf','cpu'],default='procedural')
     p.add_argument('--tts',choices=['espeak','edge','none'],default='espeak')
     p.add_argument('--output',default='output/funny_short.mp4')
     x=p.parse_args()
