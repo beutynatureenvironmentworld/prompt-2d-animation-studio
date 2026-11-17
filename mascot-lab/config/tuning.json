@@ -1,7 +1,7 @@
 {
-  "contact_offset": 14,
-  "right_hand_offset": 72,
+  "contact_offset": 21,
+  "right_hand_offset": 69,
   "start_x": 110,
   "slip_x": 175,
-  "knock_recoil_px": 11
+  "knock_recoil_px": 17
 }
