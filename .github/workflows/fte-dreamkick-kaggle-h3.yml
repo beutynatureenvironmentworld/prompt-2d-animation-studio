@@ -1,0 +1,85 @@
+name: Funny Toon Ever — Dream Kick Kaggle MiniMax H3
+on:
+  push:
+    branches: [feature/fte-dreamkick-kaggle-h3]
+    paths:
+      - 'dreamkick-h3/**'
+      - '.github/workflows/fte-dreamkick-kaggle-h3.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify MiniMax worker compiles and no GPU claim is fabricated
+        run: |
+          python -m py_compile dreamkick-h3/gpu_job.py
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('dreamkick-h3/gpu_job.py').read_text()
+          assert 'H3Request' in s and 'run_generation' in s
+          assert 'MiniMax-H3' in s and 'funnytoonever' in s
+          assert 'vid.best' not in s
+          assert "d['h3_inference_verified']=True" in s
+          assert "d['status']='completed'" in s
+          print('CPU PREFLIGHT VALID: this did NOT execute H3 video generation')
+          PY
+  submit-one-private-h3-kaggle-kernel:
+    if: startsWith(github.event.head_commit.message, 'gpu-submit-once:')
+    needs: source-preflight
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check Kaggle connection without exposing credentials
+        id: access
+        run: |
+          if [ -z "$KAGGLE_USERNAME" ] || [ -z "$KAGGLE_API_TOKEN" ]; then
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo 'Kaggle API connection missing. Set repository variable KAGGLE_USERNAME and secret KAGGLE_API_TOKEN.'
+          else
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+            echo 'Kaggle account fields are present.'
+          fi
+      - name: Submit exactly one PRIVATE Kaggle H3 GPU script
+        if: steps.access.outputs.ready == 'true'
+        id: submit
+        run: |
+          python -m pip install --quiet 'kaggle>=1.7,<2'
+          mkdir -p /tmp/fte_h3_private_job
+          cp dreamkick-h3/gpu_job.py /tmp/fte_h3_private_job/gpu_job.py
+          python - <<'PY'
+          import os,json,hashlib
+          from pathlib import Path
+          root=Path('/tmp/fte_h3_private_job')
+          source=(root/'gpu_job.py').read_bytes()
+          slug='fte-dreamkick-h3-'+os.environ['GITHUB_RUN_ID']+'-'+hashlib.sha256(source).hexdigest()[:8]
+          kid=os.environ['KAGGLE_USERNAME']+'/'+slug
+          config={'id':kid,'title':'FTE Dream Kick MiniMax H3 experimental',
+                  'code_file':'gpu_job.py','language':'python','kernel_type':'script',
+                  'is_private':True,'enable_gpu':True,'machine_shape':'NvidiaTeslaT4',
+                  'enable_internet':True,'dataset_sources':[],'kernel_sources':[],
+                  'competition_sources':[],'model_sources':[]}
+          (root/'kernel-metadata.json').write_text(json.dumps(config,indent=2)+'\n')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('kernel_id='+kid+'\n')
+          print('Private Kaggle kernel identifier:',kid)
+          PY
+          kaggle kernels push -p /tmp/fte_h3_private_job --accelerator NvidiaTeslaT4 -t 5400
+          echo 'KAGGLE_JOB_SUBMITTED: submission is NOT proof of an H3 MP4.'
+      - name: Display status/download instructions
+        if: steps.access.outputs.ready == 'true'
+        run: |
+          echo "Private job: ${{ steps.submit.outputs.kernel_id }}"
+          echo 'Open Kaggle Code/Notebooks and inspect the RESULT.json. No H3 output is claimed until actual MP4 and validation exist.'
