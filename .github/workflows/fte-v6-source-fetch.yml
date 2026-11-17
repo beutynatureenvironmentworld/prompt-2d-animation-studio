@@ -1,0 +1,32 @@
+name: FTE V6 — Snapshot Canonical V5 Sources
+on:
+  push:
+    branches: [feature/fte-v6-shoulder-garden]
+    paths:
+      - '.github/workflows/fte-v6-source-fetch.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bundle verifiable sources and canonical reference
+        run: |
+          python - <<'PY'
+          import zipfile
+          from pathlib import Path
+          files=[*Path('mascot-lab/v5/src').glob('*.py'),*Path('mascot-lab/v5/tests').glob('*.py'),
+                 Path('mascot-lab/config/permanent_mascot.webp'),Path('mascot-lab/v5/requirements.txt')]
+          with zipfile.ZipFile('source_snapshot.zip','w',zipfile.ZIP_DEFLATED) as z:
+            for f in files:
+              if f.exists():z.write(f)
+          print('BUNDLED',len(files))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FTE-V5-SOURCE-REPRODUCIBLE-SNAPSHOT
+          path: source_snapshot.zip
+          retention-days: 2
