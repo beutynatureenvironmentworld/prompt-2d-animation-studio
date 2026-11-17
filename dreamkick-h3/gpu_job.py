@@ -78,6 +78,7 @@ def prepare_model_storage(checkout):
  """
  from kaggle_h3.bootstrap import required_model_files
  model_dir=checkout/'ComfyUI'/'models'
+ model_dir.mkdir(parents=True,exist_ok=True)
  source=Path(os.environ.get('FTE_H3_MODEL_DATASET','/kaggle/input/fte-h3-models/models'))
  required=required_model_files('Ref2VA',include_diffusion=True)
  if source.is_dir():
