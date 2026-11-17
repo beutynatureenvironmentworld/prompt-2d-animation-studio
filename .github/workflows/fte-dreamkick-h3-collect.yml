@@ -43,7 +43,7 @@ jobs:
             echo 'Kaggle status query failed; no H3 output claim.'
             exit 0
           fi
-          if grep -Eiq 'complete|success' output/dream-kick-h3/KAGGLE_STATUS.txt; then
+          if grep -Eiq 'complete|success|error|failed|cancelled' output/dream-kick-h3/KAGGLE_STATUS.txt; then
             kaggle kernels output "$KAGGLE_KERNEL_ID" -p output/dream-kick-h3 -o
             if find output/dream-kick-h3 -name 'Funny_Toon_Ever_Dream_Kick_ACTUAL_H3.mp4' | grep -q . ; then
               python - <<'PY'
