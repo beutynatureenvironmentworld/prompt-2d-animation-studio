@@ -1,0 +1,10 @@
+{
+ "episode": "The Moon Garden Wish Bell",
+ "schema_version": "fte-v6-demo-story-v1",
+ "creative_prompt": "Our permanent black-and-white cheeky mascot wanders a luminous violet moonlit flower garden. Seeing a mysterious WISH BELL on an ornate tower, he slyly dashes over and taps it three times. A magical chime and cloud of fireflies surprise him. He jumps, slips on dew, then recovers just as a huge pink flower blooms. He responds with a delighted little wow, still grinning slyly. No narrative voiceover.",
+ "director_mode": "validated deterministic 11.5-second beat template (not Qwen inference)",
+ "character_reference": "user canonical Funny Toon Ever mascot six-pose sheet",
+ "scenes": ["enchanted moon garden", "dash to bell", "tap 3 times", "magical startled reaction", "slip and recovery", "flower bloom"],
+ "sound": {"narration": false,"reaction_style": "original formant synthesized oh/whoa/wow", "environment": ["wind","birds"], "object": ["wish bell","magic sparkles","footsteps","soft fall"]},
+ "technical_notes": ["Preserves V4 noncrossing speed-chase legs", "Embeds both shoulder roots inside torso by ~11 px", "Removes small isolated shoulder black flecks", "Original permanent face grin except special emotion beats"]
+}
