@@ -63,6 +63,44 @@ def reference_image(path,bed=False):
    inkline([(bx+s*26,by+95),(bx+s*49,by+146)],10)
    inkline([(bx+s*22,by+126),(bx+s*42,by+179)],12)
  im.save(path)
+def prepare_model_storage(checkout):
+ """Require a complete private Kaggle Input model dataset or ample local space.
+
+ Model files are never committed to public GitHub. Read-only mounted Kaggle
+ datasets must include all shared and Ref2VA diffusion checkpoints.
+ """
+ from kaggle_h3.bootstrap import required_model_files
+ model_dir=checkout/'ComfyUI'/'models'
+ source=Path(os.environ.get('FTE_H3_MODEL_DATASET','/kaggle/input/fte-h3-models/models'))
+ required=required_model_files('Ref2VA',include_diffusion=True)
+ if source.is_dir():
+  missing=[str(Path(directory)/filename) for directory,filename in required.values()
+           if not (source/directory/filename).is_file()]
+  if missing:
+   raise RuntimeError('Private H3 model dataset is incomplete; missing: '+', '.join(missing))
+  model_dir.mkdir(parents=True,exist_ok=True)
+  for directory in sorted({v[0] for v in required.values()}):
+   target=model_dir/directory
+   if target.is_symlink():
+    if target.resolve()!=(source/directory).resolve():
+     raise RuntimeError('Unexpected existing model directory symlink: '+str(target))
+   elif target.exists():
+    if any(target.iterdir()):
+     raise RuntimeError('Refusing to overwrite nonempty model directory: '+str(target))
+    target.rmdir()
+   else: pass
+   if not target.is_symlink():target.symlink_to(source/directory,target_is_directory=True)
+  return {'mode':'private_kaggle_dataset','source':str(source),'files':len(required)}
+ free_gib=round(shutil.disk_usage(WORK).free/2**30,2)
+ # Guardrail only; actual checkpoint sizes vary. No guarantee 50 GiB suffices.
+ if free_gib<50:
+  raise RuntimeError(
+   f'Kaggle free disk {free_gib} GiB: too small for H3 checkpoints and temp files. '
+   'Stage the complete licensed H3 model tree as a PRIVATE Kaggle Dataset at '
+   '/kaggle/input/fte-h3-models/models (or set FTE_H3_MODEL_DATASET). '
+   'Do not retry GPU download until storage is resolved.')
+ return {'mode':'direct_download','free_gib':free_gib,'warning':'50 GiB is a guardrail, not a guaranteed requirement'}
+
 def main():
  d={'status':'initialized','model':'MiniMax-H3 Singularity Ref2VA INT8','h3_inference_verified':False,'scenes':[],'device_count':0}
  write(d)
@@ -79,6 +117,8 @@ def main():
   sys.path.insert(0,str(checkout/'src'))
   from kaggle_h3.workflow import H3Request
   from kaggle_h3.pipeline import run_generation
+  d['model_storage']=prepare_model_storage(checkout)
+  write(d)
   for i,(slug,prompt) in enumerate(SCENES):
    if time.monotonic()-START>70*60:
     d['status']='budget_exhausted';break
