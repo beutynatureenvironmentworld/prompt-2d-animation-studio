@@ -1,0 +1,86 @@
+name: FTE V5 — Natural Front Facing Arm Swing and V4 Chase Legs
+on:
+  push:
+    branches: [feature/fte-v5-natural-front-arms, main]
+    paths:
+      - 'mascot-lab/v5/**'
+      - '.github/workflows/fte-v5-front-arm-motion.yml'
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Validated locked-door comedy prompt (not unrestricted AI choreography)'
+        type: string
+        required: false
+        default: 'A cheeky mascot runs straight to the bathroom door, knocks, slips and grins'
+permissions:
+  contents: read
+jobs:
+  front-arm-cpu-qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    env:
+      FTE_PROMPT: ${{ inputs.prompt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU animation tools
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          python -m pip install --no-cache-dir -r mascot-lab/v5/requirements.txt
+      - name: Extract head from canonical original mascot six-pose sheet
+        run: |
+          python mascot-lab/v5/src/extract_canonical.py \
+            --sheet mascot-lab/config/permanent_mascot.webp \
+            --output mascot-lab/v5/assets/canonical_neutral_pose.png
+      - name: Regression tests - V3/V4 + arm motion V5
+        run: python -m unittest discover -s mascot-lab/v5/tests -v
+      - name: Compile safe motion plan, render real MP4, run layered QA
+        run: |
+          set -euo pipefail
+          cd mascot-lab/v5
+          if [ -z "$FTE_PROMPT" ]; then FTE_PROMPT='Cheeky mascot runs, knocks and recovers'; fi
+          python src/v3_director.py --prompt "$FTE_PROMPT" --output output/MOTION_PLAN.json
+          python src/render.py --plan output/MOTION_PLAN.json \
+            --sheet assets/canonical_neutral_pose.png \
+            --output output/Funny_Toon_Ever_V5_Front_Arm_Swing.mp4
+          python src/quality_v5.py --video output/Funny_Toon_Ever_V5_Front_Arm_Swing.mp4 \
+            --report output/Funny_Toon_Ever_V5_Front_Arm_Swing.json \
+            --output output/V5_QUALITY_REPORT.json
+          ffmpeg -y -hide_banner -loglevel error -i output/Funny_Toon_Ever_V5_Front_Arm_Swing.mp4 \
+            -vf scale=360:640 -c:v libx264 -preset fast -crf 25 -c:a aac -b:a 80k \
+            -movflags +faststart output/Funny_Toon_Ever_V5_Mobile_360x640.mp4
+      - name: Confirm actual H264/AAC and strict motion metrics
+        run: |
+          ffprobe -v error -show_entries stream=codec_name,width,height:format=duration -of json \
+            mascot-lab/v5/output/Funny_Toon_Ever_V5_Front_Arm_Swing.mp4
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('mascot-lab/v5/output/Funny_Toon_Ever_V5_Front_Arm_Swing.json')
+          d=json.loads(p.read_text())
+          assert d['arm_motion_engine']=='front_sagittal_swing_plus_selective_V4_2bone_IK'
+          assert d['run_arm_screen_horizontal_max_px']<24
+          assert min(d['run_arm_y_excursion_px'].values())>70
+          assert d['leg_lane_crossings']==0 and d['leg_samples']==276
+          assert d['foot_stance_max_drift_px']<=0.5
+          assert d['knock_contact_max_error_px']<=9
+          assert d['one_pupil_per_eye'] and not d['visible_elbow_knee_circles']
+          assert d['actual_ai_inference_used']==False
+          assert Path('mascot-lab/v5/output/Funny_Toon_Ever_V5_Front_Arm_Swing.mp4').stat().st_size>30000
+          print('VERIFIED_FTE_V5_FRONTAL_ARMS_AND_V4_LEGS',d['run_arm_y_excursion_px'])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Funny-Toon-Ever-V5-Natural-Front-Arms-Verified-Demo
+          path: |
+            mascot-lab/v5/output/Funny_Toon_Ever_V5_Front_Arm_Swing.mp4
+            mascot-lab/v5/output/Funny_Toon_Ever_V5_Mobile_360x640.mp4
+            mascot-lab/v5/output/Funny_Toon_Ever_V5_Front_Arm_Swing.json
+            mascot-lab/v5/output/V5_QUALITY_REPORT.json
+            mascot-lab/v5/output/ACTUAL_V5_FRAMES.jpg
+            mascot-lab/v5/output/MOTION_PLAN.json
+          if-no-files-found: warn
+          retention-days: 7
