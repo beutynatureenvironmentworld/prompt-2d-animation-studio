@@ -1,0 +1,46 @@
+name: FTE H3 CPU storage probe — collect actual Kaggle slug
+on:
+  push:
+    branches: [feature/fte-dreamkick-kaggle-h3]
+    paths: ['.github/workflows/fte-h3-cpu-probe-collect.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  collect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      KERNEL_ID: gamagekasun/fte-h3-storage-probe-cpu-only
+    steps:
+      - name: Collect existing PRIVATE CPU-only probe, no new kernel submitted
+        run: |
+          set -euo pipefail
+          test -n "${KAGGLE_API_TOKEN:-}"
+          python -m pip install -q 'kaggle>=1.7,<2' 'six>=1.16,<2'
+          mkdir -p output
+          set +e
+          kaggle kernels status "$KERNEL_ID" > output/KAGGLE_STATUS.txt 2>&1
+          rc=$?
+          set -e
+          cat output/KAGGLE_STATUS.txt
+          if [ "$rc" -eq 0 ] && grep -Eiq 'KernelWorkerStatus\.(COMPLETE|ERROR|CANCELLED)' output/KAGGLE_STATUS.txt; then
+            kaggle kernels output "$KERNEL_ID" -p output -o >/dev/null 2>&1 || true
+          fi
+          find output -maxdepth 2 -type f -printf '%P %s bytes\n' | head -20
+          if [ -f output/FTE_H3_STORAGE_PROBE.json ]; then
+            python - <<'PY'
+          import json
+          d=json.load(open('output/FTE_H3_STORAGE_PROBE.json'))
+          print('KAGGLE_DISK_GIB', {k:v['free_gib'] for k,v in d['paths'].items()})
+          PY
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: FTE-H3-Real-Kaggle-CPU-Storage-Report
+          path: output/
+          retention-days: 7
+          if-no-files-found: warn
