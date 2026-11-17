@@ -1,6 +1,6 @@
 {
-  "contact_offset": 42,
-  "right_hand_offset": 60,
+  "contact_offset": 49,
+  "right_hand_offset": 57,
   "start_x": 110,
   "slip_x": 175,
   "knock_recoil_px": 17
