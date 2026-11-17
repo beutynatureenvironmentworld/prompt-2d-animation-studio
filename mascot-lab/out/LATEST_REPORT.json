@@ -1,11 +1,11 @@
 {
-  "gag": "surprise",
+  "gag": "door",
   "best": {
-    "score": 98.52,
+    "score": 97.02,
     "motion_px": 63.76,
-    "contact_error_px_estimate": 0,
+    "contact_error_px_estimate": 1,
     "decoded_video_frame_difference": 17.252,
-    "decoded_frames": 168,
+    "decoded_frames": 206,
     "max_clipping_fraction": 0.0148,
     "clipped_frames": 4,
     "warnings": [
@@ -23,12 +23,12 @@
   },
   "candidates": [
     {
-      "score": 98.52,
+      "score": 97.02,
       "passed": true,
       "video": "candidate_0.mp4"
     },
     {
-      "score": 98.52,
+      "score": 91.02,
       "passed": true,
       "video": "candidate_1.mp4"
     }
