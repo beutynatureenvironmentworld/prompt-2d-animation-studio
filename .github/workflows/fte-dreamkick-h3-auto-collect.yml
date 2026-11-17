@@ -1,4 +1,5 @@
 name: Funny Toon Ever — Auto-collect REAL Kaggle MiniMax H3 Dream Kick
+# On-demand status refresh for the existing Kaggle job only; no GPU resubmission.
 on:
   push:
     branches: [main]
