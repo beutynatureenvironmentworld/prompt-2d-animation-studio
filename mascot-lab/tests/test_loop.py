@@ -14,6 +14,16 @@ class TestMascotLoop(unittest.TestCase):
   t=mod.storyboard('door');r=next(x for x in t if x['action']=='knock');p={'contact_offset':7,'right_hand_offset':75}
   s=mod.state_at((r['start']+r['end'])/2,t,p)
   self.assertLessEqual(abs(245-(s['x']+p['right_hand_offset'])),18)
+ def test_slip_moves_horizontally_with_configured_anchor(self):
+  t=mod.storyboard('door');b=next(x for x in t if x['action']=='slip')
+  p={'contact_offset':14,'slip_x':175}
+  x0=mod.state_at(b['start'],t,p)['x']
+  xm=mod.state_at((b['start']+b['end'])/2,t,p)['x']
+  xe=mod.state_at(b['end']-.0001,t,p)['x']
+  self.assertAlmostEqual(x0,175)
+  self.assertGreater(x0-xm,10)
+  self.assertGreater(xm-xe,10)
+  self.assertAlmostEqual(xe,149,delta=.01)
  def test_images_source_is_six_paired_original_poses(self):
   self.assertEqual(len(mod.NAMES),6)
  def test_gag_library_is_bounded(self):
