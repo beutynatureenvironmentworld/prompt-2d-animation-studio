@@ -126,7 +126,9 @@ def frame(t,poses,base,timeline,params):
             d.line((max(3,xx-33),yy,xx,yy-5),fill=(22,22,22,130),width=3)
     if action=='knock':
         # The hand's target is at the left edge of the door; impact after reach.
-        impact=math.sin(2*math.pi*3.3*s['u'])>.65
+        # Match the visual impact bursts to the authored knock sound events.
+        elapsed=s['u']*DURATIONS['knock']
+        impact=any(0<=elapsed-hit<.095 for hit in (.38,.74,1.12))
         if impact:
             for radius in (11,20):
                 d.arc((248-radius,394-radius,248+radius,394+radius),-80,55,fill=(35,35,35,220),width=3)
