@@ -1,14 +1,14 @@
 # Funny Toon Ever — Real MP4 QA
 
-Gag: **prank**. Best measured score: **97.02**; geometry/video gates: **True**.
+Gag: **race**. Best measured score: **98.56**; geometry/video gates: **True**.
 
 - Run travel: 63.76 px
-- Estimated door contact gap: 1 px
-- Decoded frame difference: 17.252
-- Max cropped character silhouette: 1.48%
+- Estimated door contact gap: 0 px
+- Decoded frame difference: 15.245
+- Max cropped character silhouette: 1.44%
 
 ## Remaining artistic limitations
-- source poses all grin: expression variation and eye-pupil repair still need visual/manual validation
-- true arm-to-door skeletal inverse kinematics not yet implemented; position is calibrated approximately
+- whole-pose source still lacks independent arm/leg skeletal IK; authored fist anchor is calibrated
+- one-pupil-per-eye overlay is validated in code; visual inspection of frames remains necessary
 
 Automated numbers are not a substitute for inspecting the real video. No code rewrites occurred in the loop.
