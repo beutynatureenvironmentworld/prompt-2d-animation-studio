@@ -19,6 +19,9 @@ jobs:
     steps:
       - name: Prepare result folder
         run: mkdir -p output/fte-dreamkick-h3
+      - name: Record exact UTC poll time for result auditing
+        shell: bash
+        run: date -u +'%Y-%m-%dT%H:%M:%SZ' > output/fte-dreamkick-h3/LAST_CHECK_UTC.txt
       - name: Poll existing Kaggle GPU job; never start another GPU session
         shell: bash
         run: |
