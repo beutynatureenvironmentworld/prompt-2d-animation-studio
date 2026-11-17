@@ -1,0 +1,81 @@
+name: Funny Toon Ever — Auto-collect REAL Kaggle MiniMax H3 Dream Kick
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/fte-dreamkick-h3-auto-collect.yml']
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check-existing-private-kaggle-h3:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      KAGGLE_KERNEL_ID: gamagekasun/fte-dreamkick-h3-44116299561-4132f6c6
+    steps:
+      - name: Prepare result folder
+        run: mkdir -p output/fte-dreamkick-h3
+      - name: Poll existing Kaggle GPU job; never start another GPU session
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from datetime import datetime, timezone
+          from pathlib import Path
+          if datetime.now(timezone.utc) > datetime(2026,11,20,16,20,tzinfo=timezone.utc):
+              Path("output/fte-dreamkick-h3/KAGGLE_STATUS.txt").write_text("POLLING_EXPIRED: 72-hour collection window ended; no new GPU job submitted.\n")
+              Path("output/fte-dreamkick-h3/STOP").touch()
+          PY
+          if [ -e output/fte-dreamkick-h3/STOP ]; then exit 0; fi
+          if [ -z "${KAGGLE_API_TOKEN:-}" ] || [ -z "${KAGGLE_USERNAME:-}" ]; then
+            echo 'KAGGLE_CREDENTIALS_MISSING: repository secret/variable required.' > output/fte-dreamkick-h3/KAGGLE_STATUS.txt
+            exit 0
+          fi
+          python -m pip install --quiet 'kaggle>=1.7,<2' 'six>=1.16,<2'
+          set +e
+          kaggle kernels status "$KAGGLE_KERNEL_ID" > output/fte-dreamkick-h3/KAGGLE_STATUS.txt 2>&1
+          rc=$?
+          set -e
+          cat output/fte-dreamkick-h3/KAGGLE_STATUS.txt
+          if [ "$rc" -ne 0 ]; then
+            echo 'STATUS_QUERY_FAILED: no GPU inference claimed.' >> output/fte-dreamkick-h3/KAGGLE_STATUS.txt
+            exit 0
+          fi
+          if ! grep -Eiq 'KernelWorkerStatus\.(COMPLETE|ERROR|CANCELLED)' output/fte-dreamkick-h3/KAGGLE_STATUS.txt; then
+            echo 'Still queued/running: no MP4 claimed.'
+            exit 0
+          fi
+          kaggle kernels output "$KAGGLE_KERNEL_ID" -p output/fte-dreamkick-h3 -o || true
+          python - <<'PY'
+          from pathlib import Path
+          import json,subprocess
+          root=Path('output/fte-dreamkick-h3')
+          report=next(iter(root.rglob('RESULT.json')),None)
+          video=next(iter(root.rglob('Funny_Toon_Ever_Dream_Kick_ACTUAL_H3.mp4')),None)
+          verified=False
+          reason='RESULT.json or actual H3 MP4 absent'
+          if report and video:
+              try:
+                  d=json.loads(report.read_text())
+                  info=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(video)],text=True))
+                  v=next(x for x in info['streams'] if x['codec_type']=='video')
+                  aud=any(x['codec_type']=='audio' for x in info['streams'])
+                  verified=(d.get('status')=='completed' and d.get('h3_inference_verified') is True
+                    and v.get('width',0)*16==v.get('height',0)*9 and aud and float(info['format']['duration'])>=8)
+                  reason='Validated 9:16 H3 MP4 with audio and verified manifest' if verified else 'Manifest, dimensions, duration or audio did not validate'
+              except Exception as e: reason=f'Validation error: {e}'
+          (root/'COLLECTION_QA.json').write_text(json.dumps({'verified_h3_video':verified,'reason':reason},indent=2)+'\n')
+          print('H3 output QA:',reason)
+          PY
+      - name: Upload status, logs, and ONLY real outputs when available
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Funny-Toon-Ever-Dream-Kick-Actual-H3-Status-And-Output
+          path: output/fte-dreamkick-h3/
+          retention-days: 7
+          if-no-files-found: warn
