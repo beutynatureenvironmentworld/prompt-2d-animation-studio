@@ -29,7 +29,8 @@ jobs:
           echo '=== KAGGLE STATUS ==='; cat diagnosis/STATUS.txt
           echo '=== OUTPUT FILE LIST ==='; head -n 60 diagnosis/OUTPUT_FILE_LIST.txt
           echo '=== MANIFEST ==='; head -n 40 diagnosis/MANIFEST_DOWNLOAD.txt
-          echo '=== KERNEL LOG TAIL ==='; tail -c 18000 diagnosis/KERNEL_LOGS.txt
+          echo '=== KAGGLE DOWNLOADED LOG TAIL ==='; find diagnosis/final-manifest -type f -name '*.log' -exec tail -c 24000 {} \;
+          echo '=== KERNEL LOG COMMAND OUTPUT ==='; tail -c 2000 diagnosis/KERNEL_LOGS.txt
           find diagnosis/final-manifest -name 'RESULT.json' -type f -exec cat {} \;
       - name: Archive logs and result
         if: always()
