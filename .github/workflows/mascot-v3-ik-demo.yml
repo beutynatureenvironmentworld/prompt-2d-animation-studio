@@ -1,0 +1,62 @@
+name: FTE V3 — Permanent Mascot IK Super Test Video
+on:
+  push:
+    branches:
+      - feature/fte-v3-skeletal-motion
+    paths:
+      - 'mascot-lab/v3/**'
+      - '.github/workflows/mascot-v3-ik-demo.yml'
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Locked-door gag prompt (current proven template)'
+        required: false
+        default: 'A sneaky mascot runs to a locked restroom door, knocks and slips before he sees PULL!'
+        type: string
+permissions:
+  contents: read
+jobs:
+  permanent-mascot-ik-cpu-demo:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    env:
+      FTE_PROMPT: ${{ inputs.prompt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install real CPU rig and video dependencies
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          python -m pip install --no-cache-dir -r mascot-lab/v3/requirements.txt
+      - name: Extract original permanent mascot source head
+        run: |
+          python mascot-lab/v3/src/extract_canonical.py \
+            --sheet mascot-lab/config/permanent_mascot.webp \
+            --output mascot-lab/v3/assets/canonical_neutral_pose.png
+      - name: Validate IK geometry, foot locking, timeline and identity
+        run: python -m unittest discover -s mascot-lab/v3/tests -v
+      - name: Compile deterministic safe director JSON and create real video
+        run: |
+          cd mascot-lab/v3
+          if [ -z "$FTE_PROMPT" ]; then FTE_PROMPT='A sneaky mascot knocks on the bathroom door, slips and recovers'; fi
+          python src/v3_director.py --prompt "$FTE_PROMPT" --output output/MOTION_PLAN.json
+          python src/render.py --plan output/MOTION_PLAN.json \
+            --sheet assets/canonical_neutral_pose.png \
+            --output output/Funny_Toon_Ever_V3_Fast_IK_Super_Test.mp4
+          python src/quality.py --video output/Funny_Toon_Ever_V3_Fast_IK_Super_Test.mp4 \
+            --report output/Funny_Toon_Ever_V3_Fast_IK_Super_Test.json
+      - name: Save REAL video, decoded-frame contact sheet and provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Funny-Toon-Ever-V3-IK-Permanent-Mascot-MP4
+          path: |
+            mascot-lab/v3/output/Funny_Toon_Ever_V3_Fast_IK_Super_Test.mp4
+            mascot-lab/v3/output/Funny_Toon_Ever_V3_Fast_IK_Super_Test.json
+            mascot-lab/v3/output/ACTUAL_V3_FRAMES.jpg
+            mascot-lab/v3/output/MOTION_PLAN.json
+            mascot-lab/v3/output/QUALITY_REPORT.json
+          retention-days: 7
+          if-no-files-found: warn
