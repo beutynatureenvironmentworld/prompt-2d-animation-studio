@@ -3,9 +3,17 @@
   "requested_at": "2026-11-17",
   "episode": "Dream Kick -> Bedroom Reality & Crash",
   "gpu_job": "single private Kaggle MiniMax H3 Singularity Ref2VA INT8",
-  "status": "requested_not_verified",
+  "status": "gpu_retry_requested_after_verified_cpu_storage_probe",
   "render_format": "9:16",
   "duration_seconds": 10,
   "watermark": "funnytoonever",
-  "no_public_endpoint": true
+  "no_public_endpoint": true,
+  "storage_probe": {
+    "source": "gamagekasun/fte-h3-storage-probe-cpu-only",
+    "working_free_gib": 19.5,
+    "tmp_free_gib": 966.92,
+    "verified_cpu_only": true
+  },
+  "model_root_selection": "auto_choose_large_tmp_volume",
+  "note": "This is a new bounded GPU attempt; no H3 output is claimed until validated MP4 exists."
 }
