@@ -1,0 +1,13 @@
+{
+  "schema": "fte.hybrid.story.v1",
+  "title": "Funny Toon Ever — Chili Rocket Hybrid",
+  "character_ref": "mascot-lab/config/permanent_mascot.webp",
+  "project": "funny-toon-ever",
+  "output_fps": 24,
+  "clips": [
+    {"id":"scene_01","duration_s":2.0,"kind":"cpu","action":"sly_pickup","prompt":"One permanent white mischievous cartoon mascot picks up a tiny red pepper. Smooth shoulders, one pupil per eye. No clone characters."},
+    {"id":"scene_02","duration_s":2.0,"kind":"cpu","action":"bite_shock","prompt":"The mascot bites the pepper, then abruptly freezes with bulging eyes and red face, natural connected arms."},
+    {"id":"scene_03","duration_s":2.0,"kind":"gpu_candidate","action":"burst_fire","prompt":"Original single round white black-outline funny mascot with a huge startled face fires a vivid cartoon rocket flame; fast dramatic motion, clear hand and leg silhouettes, no extra limbs, no text."},
+    {"id":"scene_04","duration_s":2.0,"kind":"cpu","action":"smoke_recover","prompt":"The original mascot exhales smoky curls, wobbles, recovers the sly grin; readable 2D pose-driven motion."}
+  ]
+}

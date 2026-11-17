@@ -1,0 +1,83 @@
+name: FTE Kaggle GPU Hybrid — Safe Dry-Run and Opt-In One Shot
+on:
+  push:
+    branches: [feature/fte-kaggle-gpu-hybrid-2026, main]
+    paths:
+      - 'kaggle-hybrid-v2/**'
+      - '.github/workflows/fte-kaggle-gpu-hybrid-v2.yml'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'dry-run=CPU no GPU; submit-probe=real Kaggle CUDA; submit-wan21=one candidate; collect=download finished Kaggle results'
+        type: choice
+        options: [dry-run, submit-probe, submit-wan21, collect]
+        default: dry-run
+        required: true
+permissions:
+  contents: read
+jobs:
+  safe-cpu-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: CPU safety tests and FFmpeg media assembly smoke
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          python -m unittest discover -s kaggle-hybrid-v2/tests -v
+          python kaggle-hybrid-v2/story.py kaggle-hybrid-v2/examples/spicy_hybrid_story.json --out kaggle-hybrid-v2/output/gpu_jobs.json --gpu-shots 1
+          python kaggle-hybrid-v2/preflight.py --output kaggle-hybrid-v2/output
+      - name: Private Kaggle job metadata dry-run
+        run: |
+          python kaggle-hybrid-v2/dispatch.py --username exampleuser --mode probe --folder kaggle-hybrid-v2/output/kaggle_probe_package --minutes 8
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FTE-Kaggle-Hybrid-CPU-Verified-Plan
+          path: |
+            kaggle-hybrid-v2/output/gpu_jobs.json
+            kaggle-hybrid-v2/output/GPU_PREFLIGHT.json
+            kaggle-hybrid-v2/output/kaggle_probe_package/kernel-metadata.json
+          if-no-files-found: error
+          retention-days: 7
+  optional-kaggle-job:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.action != 'dry-run' }}
+    needs: safe-cpu-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      KAGGLE_KERNEL_ID: ${{ vars.KAGGLE_KERNEL_ID }}
+      ACTION: ${{ inputs.action }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check credentials and install official CLI
+        run: |
+          test -n "$KAGGLE_API_TOKEN" || { echo 'Missing KAGGLE_API_TOKEN secret'; exit 1; }
+          python -m pip install --disable-pip-version-check 'kaggle>=1.7,<2'
+      - name: Submit exactly one private bounded Kaggle job
+        if: ${{ inputs.action == 'submit-probe' || inputs.action == 'submit-wan21' }}
+        run: |
+          test -n "$KAGGLE_USERNAME" || { echo 'Missing KAGGLE_USERNAME variable'; exit 1; }
+          python kaggle-hybrid-v2/story.py kaggle-hybrid-v2/examples/spicy_hybrid_story.json --out /tmp/fte_gpu_jobs.json --gpu-shots 1
+          if [ "$ACTION" = submit-probe ]; then M=probe; LIMIT=10; else M=wan21-t2v; LIMIT=30; fi
+          python kaggle-hybrid-v2/dispatch.py --username "$KAGGLE_USERNAME" --mode "$M" --jobs /tmp/fte_gpu_jobs.json \
+             --folder "/tmp/fte-${M}-job" --minutes "$LIMIT" --submit
+      - name: Fetch only completed private Kaggle output
+        if: ${{ inputs.action == 'collect' }}
+        run: |
+          test -n "$KAGGLE_KERNEL_ID" || { echo 'Set KAGGLE_KERNEL_ID repo variable to the completed private kernel ID'; exit 1; }
+          python kaggle-hybrid-v2/collect_kaggle.py "$KAGGLE_KERNEL_ID" --out output/collected --download
+      - uses: actions/upload-artifact@v4
+        if: ${{ inputs.action == 'collect' }}
+        with:
+          name: FTE-Kaggle-Private-Results-For-Review
+          path: output/collected/
+          retention-days: 7
+          if-no-files-found: warn

@@ -1,0 +1,15 @@
+{
+  "schema": "fte.gpu.jobs.v1",
+  "project": "funny-toon-ever",
+  "character_ref": "mascot-lab/config/permanent_mascot.webp",
+  "model_mode": "wan21-t2v-1.3b",
+  "caption": "Generated clips require human identity review before publishing",
+  "shots": [
+    {
+      "id": "scene_03",
+      "prompt": "Original single round white black-outline funny mascot with a huge startled face fires a vivid cartoon rocket flame; fast dramatic motion, clear hand and leg silhouettes, no extra limbs, no text.",
+      "duration_s": 2.0
+    }
+  ],
+  "story_sha256": "e64931ce315a2d5a7f0f6cd8a873c608890317b1ad244882a6a00517768744e7"
+}
