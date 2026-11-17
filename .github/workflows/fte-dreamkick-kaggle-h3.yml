@@ -57,7 +57,7 @@ jobs:
         if: steps.access.outputs.ready == 'true'
         id: submit
         run: |
-          python -m pip install --quiet 'kaggle>=1.7,<2'
+          python -m pip install --quiet 'kaggle>=1.7,<2' 'six>=1.16,<2'
           mkdir -p /tmp/fte_h3_private_job
           cp dreamkick-h3/gpu_job.py /tmp/fte_h3_private_job/gpu_job.py
           python - <<'PY'
