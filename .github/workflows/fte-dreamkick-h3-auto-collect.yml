@@ -1,6 +1,5 @@
 name: Funny Toon Ever — Auto-collect REAL Kaggle MiniMax H3 Dream Kick
-# Tracks the one private Kaggle GPU render submitted on 2026-11-18;
-# filters huge model/debug outputs, retains ONLY final H3 MP4 + RESULT manifest.
+# Read-only monitor for the November 18 real MiniMax H3 Kaggle GPU retry.
 # On-demand status refresh for the existing Kaggle job only; no GPU resubmission.
 on:
   push:
@@ -59,37 +58,7 @@ jobs:
             echo 'Still queued/running: no MP4 claimed.'
             exit 0
           fi
-          kaggle kernels output "$KAGGLE_KERNEL_ID" --file-pattern 'RESULT\.json$|Funny_Toon_Ever_Dream_Kick_ACTUAL_H3\.mp4
-          python - <<'PY'
-          from pathlib import Path
-          import json,subprocess
-          root=Path('output/fte-dreamkick-h3')
-          report=next(iter(root.rglob('RESULT.json')),None)
-          video=next(iter(root.rglob('Funny_Toon_Ever_Dream_Kick_ACTUAL_H3.mp4')),None)
-          verified=False
-          reason='RESULT.json or actual H3 MP4 absent'
-          if report and video:
-              try:
-                  d=json.loads(report.read_text())
-                  info=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(video)],text=True))
-                  v=next(x for x in info['streams'] if x['codec_type']=='video')
-                  aud=any(x['codec_type']=='audio' for x in info['streams'])
-                  verified=(d.get('status')=='completed' and d.get('h3_inference_verified') is True
-                    and v.get('width',0)*16==v.get('height',0)*9 and aud and float(info['format']['duration'])>=8)
-                  reason='Validated 9:16 H3 MP4 with audio and verified manifest' if verified else 'Manifest, dimensions, duration or audio did not validate'
-              except Exception as e: reason=f'Validation error: {e}'
-          (root/'COLLECTION_QA.json').write_text(json.dumps({'verified_h3_video':verified,'reason':reason},indent=2)+'\n')
-          print('H3 output QA:',reason)
-          PY
-      - name: Upload status, logs, and ONLY real outputs when available
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: Funny-Toon-Ever-Dream-Kick-Actual-H3-Status-And-Output
-          path: output/fte-dreamkick-h3/
-          retention-days: 30
-          if-no-files-found: warn
- -p output/fte-dreamkick-h3 -o || true
+          kaggle kernels output "$KAGGLE_KERNEL_ID" --file-pattern 'RESULT\.json$|Funny_Toon_Ever_Dream_Kick_ACTUAL_H3\.mp4$' -p output/fte-dreamkick-h3 -o || true
           python - <<'PY'
           from pathlib import Path
           import json,subprocess
