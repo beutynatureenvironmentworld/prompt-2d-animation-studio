@@ -70,3 +70,5 @@ jobs:
           path: output/dream-kick-h3/
           if-no-files-found: warn
           retention-days: 7
+
+# H3 collection check requested 2026-11-17 21:47 Asia/Colombo; no new GPU job submitted.
