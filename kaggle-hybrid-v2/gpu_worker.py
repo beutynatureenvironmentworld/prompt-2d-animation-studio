@@ -40,10 +40,21 @@ def render_wan21_job(shot,output):
     if dev.total_memory<14*2**30:raise RuntimeError('Need approx T4 16GB GPU; refusing smaller card')
     # NVIDIA T4 has compute capability 7.5: float16 rather than bfloat16.
     dtype=torch.float16 if dev.major<8 else torch.bfloat16
-    cache=os.getenv('HF_HOME')
+    # Optional private Kaggle Dataset mount staged while GPU was OFF.
+    # FTE_WAN_MODEL_DIR=/kaggle/input/<private-dataset>/wan21-model
+    # No network call or large weights download if an offline dataset mount exists.
+    offline_dir=os.getenv('FTE_WAN_MODEL_DIR')
     kwargs={'torch_dtype':dtype}
-    if cache:kwargs['cache_dir']=cache
-    pipe=WanPipeline.from_pretrained(MODEL,**kwargs)
+    if offline_dir:
+        from cache_model import validate_cache
+        validate_cache(offline_dir)
+        model_path=str(Path(offline_dir).resolve())
+        kwargs['local_files_only']=True
+    else:
+        model_path=MODEL
+        cache=os.getenv('HF_HOME')
+        if cache:kwargs['cache_dir']=cache
+    pipe=WanPipeline.from_pretrained(model_path,**kwargs)
     # CPU offload conserves the VRAM that matters (each GPU separate).
     pipe.enable_model_cpu_offload()
     generator=torch.Generator(device='cuda').manual_seed(418)

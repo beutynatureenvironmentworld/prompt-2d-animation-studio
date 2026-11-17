@@ -2,7 +2,7 @@ import json,os,subprocess,sys,tempfile,unittest
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-import story,dispatch,preflight,gpu_worker,assemble
+import story,dispatch,preflight,gpu_worker,assemble,cache_model
 
 class HybridTests(unittest.TestCase):
     def setUp(self):
@@ -50,6 +50,22 @@ class HybridTests(unittest.TestCase):
         fake=self.p/'queue.zip'
         with zipfile.ZipFile(fake,'w') as z:z.writestr('settings.json','{"version":1}')
         self.assertEqual(gpu_worker.safe_queue(fake),fake.resolve())
+    def test_cpu_cache_staging_is_dry_by_default(self):
+        info=cache_model.stage(self.p/'wan21-model',download=False)
+        self.assertFalse(info['downloaded'])
+        self.assertFalse((self.p/'wan21-model').exists())
+    def test_incomplete_cache_refused(self):
+        root=self.p/'wan21-model';root.mkdir()
+        (root/'model_index.json').write_text('{}')
+        with self.assertRaises(ValueError):cache_model.validate_cache(root)
+    def test_private_dataset_path_for_offline_gpu_cache(self):
+        jobs=self.p/'jobs.json';story.make_batch(self.story,jobs)
+        dispatch.package('valid_user','wan21-t2v',jobs,self.p/'package',20,dataset_slug='owner/quiet-model',cache_subdir='wan21-model')
+        code=(self.p/'package/gpu_job.py').read_text()
+        self.assertIn('FTE_WAN_MODEL_DIR',code)
+        self.assertIn('/kaggle/input/quiet-model/wan21-model',code)
+        md=json.loads((self.p/'package/kernel-metadata.json').read_text())
+        self.assertEqual(md['dataset_sources'],['owner/quiet-model'])
     def test_no_unguarded_cpu_fallback(self):
         with self.assertRaises(FileNotFoundError):assemble.assemble(self.story,self.p/'cpu',self.p/'gpu',self.p/'out.mp4')
     def test_silent_fallback_requires_flag(self):

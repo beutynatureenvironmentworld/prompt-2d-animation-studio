@@ -31,6 +31,18 @@ python kaggle-hybrid-v2/dispatch.py --username YOUR_KAGGLE_USERNAME --mode probe
 
 ### Kaggle two-phase workflow, to minimize quota burn
 
+### Actual GPU-OFF model cache (optional, recommended for repeat sessions)
+
+Run this **in Kaggle notebook Accelerator=None**, with Internet enabled and plenty of disk. It does not use GPU time:
+
+```bash
+CUDA_VISIBLE_DEVICES=-1 python kaggle-hybrid-v2/cache_model.py --out /kaggle/working/wan21-model
+# After checking licensing and available disk (model weights can take many GB):
+CUDA_VISIBLE_DEVICES=-1 python kaggle-hybrid-v2/cache_model.py --out /kaggle/working/wan21-model --download
+```
+
+Then save `/kaggle/working/wan21-model` as a **PRIVATE Kaggle Dataset**, preserving its `wan21-model/` directory. In the private GPU job include that Dataset as a source (`--dataset-slug owner/private-slug`) and the runner will load the mounted `/kaggle/input/private-slug/wan21-model` **offline**, with `local_files_only=True` and a completed cache manifest check. Never claim it loads in 10 seconds: disk mount and model initialization still take time. Weights are not stored in public GitHub. Do not cache H3 this way without its own explicit licensing and multi-part checkpoint plan.
+
 1. On **CPU only**, draft `examples/spicy_hybrid_story.json`, select 1–2 GPU candidates; optionally cache model checkpoints as a user-controlled **private Kaggle Dataset/Model**, subject to redistribution licences, quotas, and actual download size. Do not use public GitHub for multi-GB weights.
 2. Create a **private** Kaggle T4 notebook. Set Internet On only if downloading licensed model weights. Run `bootstrap_kaggle.sh probe` first; this tests real GPU arithmetic without generating fake AI frames. Decide whether to continue once VRAM, system RAM and disk are visible.
 3. Optionally `bootstrap_kaggle.sh wan21-t2v`, then execute a single `gpu_worker.py --mode wan21-t2v --jobs gpu_jobs.json ...` test. Only **one GPU** is used. You need to explicitly start the Kaggle session. No guaranteed T4 generation speed or successful 1st run.

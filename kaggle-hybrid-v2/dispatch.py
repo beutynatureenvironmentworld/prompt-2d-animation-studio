@@ -12,7 +12,7 @@ ROOT=Path(__file__).resolve().parent
 USER=re.compile(r'^[A-Za-z0-9_-]{2,64}$')
 
 
-def package(username,mode,jobs,folder,minutes=20,queue_source=None,dataset_slug=None):
+def package(username,mode,jobs,folder,minutes=20,queue_source=None,dataset_slug=None,cache_subdir='wan21-model'):
     if not USER.fullmatch(username):raise ValueError('Invalid Kaggle username')
     if mode not in ('probe','wan21-t2v','wangp-queue'):raise ValueError('Unsupported mode')
     if type(minutes)!=int or not 2<=minutes<=60:raise ValueError('2–60 minute hard ceiling')
@@ -21,7 +21,8 @@ def package(username,mode,jobs,folder,minutes=20,queue_source=None,dataset_slug=
     if output.exists() and list(output.iterdir()):raise FileExistsError('Refuse to overwrite job package')
     output.mkdir(parents=True,exist_ok=True)
     if dataset_slug and not re.fullmatch(r'[A-Za-z0-9_-]+/[A-Za-z0-9_-]+',dataset_slug):raise ValueError('Bad Kaggle dataset identifier')
-    for f in ('gpu_worker.py','story.py','preflight.py','bootstrap_kaggle.sh'):
+    if not re.fullmatch(r'[A-Za-z0-9_-]{1,64}',cache_subdir):raise ValueError('Bad cache subdirectory name')
+    for f in ('gpu_worker.py','story.py','preflight.py','cache_model.py','bootstrap_kaggle.sh'):
         shutil.copy2(ROOT/f,output/f)
     if mode!='probe':shutil.copy2(jobs,output/'gpu_jobs.json')
     if queue_source:
@@ -35,9 +36,9 @@ def package(username,mode,jobs,folder,minutes=20,queue_source=None,dataset_slug=
         workerargs=['--mode','wangp-queue','--jobs','gpu_jobs.json','--queue',qp]
     elif mode=='wan21-t2v':workerargs=['--mode','wan21-t2v','--jobs','gpu_jobs.json']
     else:workerargs=['--mode','probe']
-    payload={"mode":mode,"seconds":minutes*60,"workerargs":workerargs}
+    payload={"mode":mode,"seconds":minutes*60,"workerargs":workerargs,"cache_dir":(f'/kaggle/input/{dataset_slug.split("/")[1]}/{cache_subdir}' if (dataset_slug and mode=='wan21-t2v') else None)}
     # Write literal repr, not eval or subprocess shell interpolation.
-    script='''import json,os,subprocess,sys\nfrom pathlib import Path\nC=%r\nHERE=Path(__file__).resolve().parent\nos.chdir(HERE)\nsubprocess.run(["bash",str(HERE/"bootstrap_kaggle.sh"),C["mode"]],check=True,timeout=2400)\nsubprocess.run([sys.executable,str(HERE/"gpu_worker.py"),*C["workerargs"],"--output","/kaggle/working/fte_gpu_results","--max-seconds",str(C["seconds"])],check=True,timeout=C["seconds"]+60)\n'''%payload
+    script='''import json,os,subprocess,sys\nfrom pathlib import Path\nC=%r\nHERE=Path(__file__).resolve().parent\nos.chdir(HERE)\nif C.get("cache_dir"): os.environ["FTE_WAN_MODEL_DIR"]=C["cache_dir"]\nsubprocess.run(["bash",str(HERE/"bootstrap_kaggle.sh"),C["mode"]],check=True,timeout=2400)\nsubprocess.run([sys.executable,str(HERE/"gpu_worker.py"),*C["workerargs"],"--output","/kaggle/working/fte_gpu_results","--max-seconds",str(C["seconds"])],check=True,timeout=C["seconds"]+60)\n'''%payload
     (output/'gpu_job.py').write_text(script)
     digest=hashlib.sha256((mode+username+str(Path(jobs).resolve())).encode()).hexdigest()[:8]
     slug='fte-hybrid-'+mode+'-'+digest
@@ -54,8 +55,8 @@ def package(username,mode,jobs,folder,minutes=20,queue_source=None,dataset_slug=
 def main():
  p=argparse.ArgumentParser();p.add_argument('--username',required=True);p.add_argument('--mode',choices=('probe','wan21-t2v','wangp-queue'),default='probe')
  p.add_argument('--jobs',default=str(ROOT/'examples/gpu_jobs.json'));p.add_argument('--folder',default='output/kaggle_job')
- p.add_argument('--minutes',type=int,default=12);p.add_argument('--queue');p.add_argument('--dataset-slug');p.add_argument('--submit',action='store_true')
- a=p.parse_args();kernel=package(a.username,a.mode,a.jobs,a.folder,a.minutes,a.queue,a.dataset_slug)
+ p.add_argument('--minutes',type=int,default=12);p.add_argument('--queue');p.add_argument('--dataset-slug');p.add_argument('--cache-subdir',default='wan21-model');p.add_argument('--submit',action='store_true')
+ a=p.parse_args();kernel=package(a.username,a.mode,a.jobs,a.folder,a.minutes,a.queue,a.dataset_slug,a.cache_subdir)
  print('PRIVATE_KAGGLE_JOB',kernel)
  if not a.submit:print('DRY_RUN_ONLY_NO_GPU_CONSUMED');return
  if not os.getenv('KAGGLE_API_TOKEN'):raise RuntimeError('KAGGLE_API_TOKEN secret missing: no submission')
