@@ -1,0 +1,11 @@
+{
+  "schema": "fte_h3_launch_request_v1",
+  "requested_at": "2026-11-17",
+  "episode": "Dream Kick -> Bedroom Reality & Crash",
+  "gpu_job": "single private Kaggle MiniMax H3 Singularity Ref2VA INT8",
+  "status": "requested_not_verified",
+  "render_format": "9:16",
+  "duration_seconds": 10,
+  "watermark": "funnytoonever",
+  "no_public_endpoint": true
+}
