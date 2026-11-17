@@ -1,11 +1,11 @@
 {
-  "gag": "prank",
+  "gag": "surprise",
   "best": {
-    "score": 97.02,
+    "score": 98.52,
     "motion_px": 63.76,
-    "contact_error_px_estimate": 1,
+    "contact_error_px_estimate": 0,
     "decoded_video_frame_difference": 17.252,
-    "decoded_frames": 170,
+    "decoded_frames": 168,
     "max_clipping_fraction": 0.0148,
     "clipped_frames": 4,
     "warnings": [
@@ -23,12 +23,12 @@
   },
   "candidates": [
     {
-      "score": 97.02,
+      "score": 98.52,
       "passed": true,
       "video": "candidate_0.mp4"
     },
     {
-      "score": 91.02,
+      "score": 98.52,
       "passed": true,
       "video": "candidate_1.mp4"
     }
