@@ -110,12 +110,28 @@ def main():
    run(['ffmpeg','-y','-loglevel','error','-f','concat','-safe','0','-i',str(lst),
         '-c','copy',str(joined)],120)
    final=OUT/'Funny_Toon_Ever_Dream_Kick_ACTUAL_H3.mp4'
-   # Original generated native scene audio stays in source files.
-   # Watermark fixed as final overlay, avoiding misspelled model-rendered text.
-   run(['ffmpeg','-y','-loglevel','error','-i',str(joined),'-vf',
+   # Original non-licensed synthesized comedy SFX and subtle room ambience.
+   # Retain the native H3 audio in raw source clips for later editorial review.
+   import wave,math,numpy as np
+   SR=22050;N=SR*10
+   y=np.zeros(N,dtype=np.float32)
+   for when,freq,seconds,amp in [(0.55,92,.11,.21),(1.15,94,.11,.21),
+       (3.75,230,.35,.48),(4.4,125,.42,.75),(5.0,450,.45,.35),
+       (6.4,730,.55,.31),(7.0,98,.55,.65),(9.0,95,.4,.50)]:
+    off=int(when*SR);n=min(round(seconds*SR),N-off)
+    if n<=0:continue
+    tt=np.arange(n,dtype=np.float32)/SR
+    env=(1-tt/seconds).clip(0,1)**2
+    y[off:off+n]+=(np.sin(2*np.pi*freq*tt)*env*amp).astype(np.float32)
+   y+=.007*np.sin(2*np.pi*49*np.arange(N)/SR)
+   audio=OUT/'original_comedy_sfx.wav'
+   with wave.open(str(audio),'wb') as w:
+    w.setnchannels(1);w.setsampwidth(2);w.setframerate(SR)
+    w.writeframes((np.tanh(y)*29000).astype('<i2').tobytes())
+   run(['ffmpeg','-y','-loglevel','error','-i',str(joined),'-i',str(audio),'-vf',
      "drawtext=text='funnytoonever':fontsize=19:fontcolor=black:box=1:boxcolor=white@0.65:x=(w-text_w)/2:y=h-37",
      '-c:v','libx264','-preset','veryfast','-crf','22','-pix_fmt','yuv420p',
-     '-movflags','+faststart',str(final)],200)
+     '-c:a','aac','-b:a','96k','-shortest','-movflags','+faststart',str(final)],200)
    d['status']='completed'
    d['h3_inference_verified']=True;d['final_video']=str(final)
   else:d['status']=d['status'] if d['status']=='budget_exhausted' else 'incomplete_h3'
