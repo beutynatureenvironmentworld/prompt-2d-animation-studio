@@ -1,13 +1,12 @@
 {
-  "gag": "race",
+  "gag": "surprise",
   "best": {
     "score": 98.56,
     "expressions_used": [
       "focus",
       "grin",
       "neutral",
-      "shock",
-      "worried"
+      "shock"
     ],
     "pupils_per_head": 2,
     "fist_contact_error_px_measured_from_sprite": null,
@@ -15,7 +14,7 @@
     "contact_error_px_estimate": 0,
     "decoded_video_frame_difference": 15.244,
     "decoded_fist_recoil_difference": 0.0,
-    "decoded_frames": 170,
+    "decoded_frames": 168,
     "max_clipping_fraction": 0.0144,
     "clipped_frames": 3,
     "warnings": [
