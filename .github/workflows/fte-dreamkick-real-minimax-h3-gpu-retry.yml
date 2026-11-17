@@ -1,0 +1,111 @@
+name: FTE Dream Kick — REAL MiniMax H3 GPU retry with /tmp model storage
+on:
+  push:
+    branches: [feature/fte-dreamkick-h3-storage-recovery-20261118]
+    paths: ['.github/workflows/fte-dreamkick-real-minimax-h3-gpu-retry.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  submit-one-private-h3-run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify original episode source and required hardware-independent conditions
+        run: |
+          set -euo pipefail
+          python -m py_compile dreamkick-h3/gpu_job.py
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('dreamkick-h3/gpu_job.py').read_text()
+          assert "MiniMax-H3" in s
+          assert "FTE_H3_ALLOW_DIRECT_DOWNLOAD" in s
+          assert "scene01_dream" in s and "scene02_bedroom" in s
+          assert "funnytoonever" in s and "vid.best" not in s
+          assert "h3_inference_verified" in s
+          assert "KAGGLE" not in s[:500] or "Kaggle" in s
+          print('H3_GPU_CODE_PREFLIGHT_OK: genuine pipeline references; not a generated video')
+          PY
+      - name: Create a unique private Kaggle 2xT4 GPU experiment
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/fte_minimax_h3_job handoff
+          if [ -z "${KAGGLE_USERNAME:-}" ] || [ -z "${KAGGLE_API_TOKEN:-}" ]; then
+            echo 'KAGGLE_CREDS_UNAVAILABLE' > handoff/RESULT.txt
+            exit 0
+          fi
+          python -m pip install --quiet 'kaggle>=1.7,<2' 'six>=1.16,<2'
+          python - <<'PY'
+          import json,os,hashlib
+          from pathlib import Path
+          s=Path('dreamkick-h3/gpu_job.py').read_text()
+          marker="from pathlib import Path\n"
+          assert marker in s
+          # All large H3 weights and all Hugging Face cache data remain in transient scratch.
+          # GPU worker verifies the scratch volume BEFORE any large H3 model download.
+          preface="""from pathlib import Path
+          import shutil
+          root_guard=Path('/tmp')
+          scratch_gib=shutil.disk_usage(root_guard).free/2**30
+          print('H3_GPU_TMP_FREE_GIB',round(scratch_gib,2),flush=True)
+          if scratch_gib < 65 and not Path('/kaggle/input/fte-h3-models/models').exists():
+              raise RuntimeError('H3 model cache missing and /tmp available disk <65GiB; refusing unsafe GPU download')
+          os.environ['FTE_H3_ALLOW_DIRECT_DOWNLOAD']='1'
+          os.environ['HF_HOME']=str(root_guard/'fte_h3_hf_cache')
+          os.environ['HF_HUB_CACHE']=str(root_guard/'fte_h3_hf_cache'/'hub')
+          os.environ['TMPDIR']=str(root_guard/'fte_h3_temporary')
+          Path(os.environ['TMPDIR']).mkdir(parents=True,exist_ok=True)
+          """
+          # Keep new lines unindented to ensure valid Python.
+          preface='\n'.join(x.lstrip() for x in preface.splitlines())+'\n'
+          s=s.replace(marker,preface,1)
+          compile(s,'gpu_job.py','exec')
+          out=Path('/tmp/fte_minimax_h3_job')
+          (out/'gpu_job.py').write_text(s)
+          slug='fte-dreamkick-h3-real-retry-'+os.environ['GITHUB_RUN_ID']
+          kid=os.environ['KAGGLE_USERNAME']+'/'+slug
+          metadata={'id':kid,'title':slug,'code_file':'gpu_job.py',
+             'language':'python','kernel_type':'script','is_private':True,
+             'enable_gpu':True,'machine_shape':'NvidiaTeslaT4','enable_internet':True,
+             'dataset_sources':[],'kernel_sources':[],'competition_sources':[],'model_sources':[]}
+          (out/'kernel-metadata.json').write_text(json.dumps(metadata,indent=2)+'\n')
+          Path('handoff/KAGGLE_KERNEL_ID.txt').write_text(kid+'\n')
+          Path('handoff/H3_SUBMISSION.json').write_text(json.dumps({
+            'kernel_id':kid,'scenario':'dream kick to bedroom crash',
+            'backend':'MiniMax H3 Singularity Ref2VA INT8',
+            'note':'SUBMITTED job, actual MP4 unverified until RESULT.json and ffprobe QA',
+            'target_video':'Funny_Toon_Ever_Dream_Kick_ACTUAL_H3.mp4',
+            'download_mode':'/tmp ephemeral large scratch, prevents /kaggle/working model overflow',
+            'character_reference':'generated original white pigtail girl and bald boy'},indent=2)+'\n')
+          print('KAGGLE_H3_TARGET',kid,flush=True)
+          PY
+          kaggle kernels push -p /tmp/fte_minimax_h3_job | tee handoff/PUSH.txt
+      - name: Check initial Kaggle state without another submission
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [ ! -s handoff/KAGGLE_KERNEL_ID.txt ]; then exit 0; fi
+          KERNEL_ID=$(cat handoff/KAGGLE_KERNEL_ID.txt)
+          for i in 1 2 3 4; do
+            kaggle kernels status "$KERNEL_ID" > handoff/KAGGLE_STATUS.txt 2>&1
+            echo "KAGGLE_INITIAL_STATUS_$i"; tail -n 3 handoff/KAGGLE_STATUS.txt
+            if grep -Eiq 'KernelWorkerStatus\.(COMPLETE|ERROR|CANCELLED)' handoff/KAGGLE_STATUS.txt; then break; fi
+            sleep 12
+          done
+      - name: Save actual Kaggle run ID and status, not a fake MP4
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Funny-Toon-Ever-MiniMax-H3-GPU-Submission-Status
+          path: handoff/
+          retention-days: 30
+          if-no-files-found: warn
