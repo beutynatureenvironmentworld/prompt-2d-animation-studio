@@ -48,7 +48,11 @@ jobs:
             echo 'STATUS_QUERY_FAILED: no GPU inference claimed.' >> output/fte-dreamkick-h3/KAGGLE_STATUS.txt
             exit 0
           fi
-          if ! grep -Eiq 'KernelWorkerStatus\.(COMPLETE|ERROR|CANCELLED)' output/fte-dreamkick-h3/KAGGLE_STATUS.txt; then
+          if grep -Eiq 'KernelWorkerStatus\.(ERROR|CANCELLED)' output/fte-dreamkick-h3/KAGGLE_STATUS.txt; then
+            echo 'KAGGLE_TERMINAL_FAILURE: old MiniMax H3 kernel failed; do not repeatedly download hundreds of diagnostic files.' >> output/fte-dreamkick-h3/KAGGLE_STATUS.txt
+            exit 0
+          fi
+          if ! grep -Eiq 'KernelWorkerStatus\.COMPLETE' output/fte-dreamkick-h3/KAGGLE_STATUS.txt; then
             echo 'Still queued/running: no MP4 claimed.'
             exit 0
           fi
