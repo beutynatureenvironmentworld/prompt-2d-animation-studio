@@ -1,0 +1,88 @@
+name: FTE H3 Kaggle storage probe (CPU only, zero GPU quota)
+on:
+  push:
+    branches: [feature/fte-dreamkick-kaggle-h3]
+    paths:
+      - '.github/workflows/fte-kaggle-h3-storage-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  kaggle-storage-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    env:
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+    steps:
+      - name: Verify configured Kaggle account
+        run: |
+          test -n "${KAGGLE_USERNAME:-}" || { echo 'Missing KAGGLE_USERNAME'; exit 1; }
+          test -n "${KAGGLE_API_TOKEN:-}" || { echo 'Missing KAGGLE_API_TOKEN'; exit 1; }
+      - name: Prepare and submit one PRIVATE CPU-only notebook
+        id: submit
+        run: |
+          python -m pip install -q 'kaggle>=1.7,<2' 'six>=1.16,<2'
+          mkdir -p /tmp/fte_h3_disk_probe output
+          cat > /tmp/fte_h3_disk_probe/script.py <<'PY'
+          import json,os,platform,shutil,time
+          from pathlib import Path
+          output=Path('/kaggle/working/FTE_H3_STORAGE_PROBE.json')
+          data={'probe':'fte_h3_storage_v1','cpu_only':True,'timestamp_utc':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),
+                'platform':platform.platform(),'paths':{},'env_paths':{}}
+          for p in ('/kaggle/working','/kaggle/temp','/kaggle/tmp','/tmp','/root/.cache','/kaggle/input'):
+              q=Path(p)
+              if q.exists():
+                  du=shutil.disk_usage(q)
+                  data['paths'][p]={'total_gib':round(du.total/2**30,2),'free_gib':round(du.free/2**30,2),
+                                    'device_id':q.stat().st_dev,'real_path':str(q.resolve())}
+          for k in ('HF_HOME','HF_HUB_CACHE','TMPDIR','HOME'):
+              data['env_paths'][k]=os.environ.get(k,'')
+          output.write_text(json.dumps(data,indent=2)+'\n')
+          print('CPU_STORAGE_PROBE_DONE')
+          PY
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=Path('/tmp/fte_h3_disk_probe')
+          kid=os.environ['KAGGLE_USERNAME']+'/fte-h3-storage-probe-'+os.environ['GITHUB_RUN_ID']
+          (p/'kernel-metadata.json').write_text(json.dumps({'id':kid,'title':'FTE H3 storage probe CPU only',
+            'code_file':'script.py','language':'python','kernel_type':'script','is_private':True,
+            'enable_gpu':False,'enable_internet':False,'dataset_sources':[],
+            'kernel_sources':[],'competition_sources':[],'model_sources':[]},indent=2)+'\n')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('kernel_id='+kid+'\n')
+          print('CPU-only private Kaggle probe:',kid)
+          PY
+          kaggle kernels push -p /tmp/fte_h3_disk_probe
+      - name: Poll CPU probe and collect only small diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          KERNEL_ID="${{ steps.submit.outputs.kernel_id }}"
+          for i in $(seq 1 25); do
+            set +e
+            kaggle kernels status "$KERNEL_ID" > output/KAGGLE_PROBE_STATUS.txt 2>&1
+            rc=$?
+            set -e
+            if [ "$rc" -eq 0 ] && grep -Eiq 'KernelWorkerStatus\.(COMPLETE|ERROR|CANCELLED)' output/KAGGLE_PROBE_STATUS.txt; then
+              kaggle kernels output "$KERNEL_ID" -p output -o > /dev/null 2>&1 || true
+              break
+            fi
+            sleep 20
+          done
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          p=next(Path('output').rglob('FTE_H3_STORAGE_PROBE.json'),None)
+          if p:
+              data=json.loads(p.read_text())
+              print('CPU probe verified; disk capacities:',{k:v['free_gib'] for k,v in data['paths'].items()})
+          else:print('No CPU probe result yet; inspect private Kaggle kernel. No GPU used.')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: FTE-H3-Kaggle-CPU-Disk-Preflight
+          path: output/
+          retention-days: 7
+          if-no-files-found: warn

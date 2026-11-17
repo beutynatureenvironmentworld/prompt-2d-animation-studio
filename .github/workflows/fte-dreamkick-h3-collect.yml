@@ -1,0 +1,74 @@
+name: Funny Toon Ever — Collect Actual Dream Kick H3 Result
+on:
+  push:
+    branches: [feature/fte-dreamkick-kaggle-h3]
+    paths:
+      - '.github/workflows/fte-dreamkick-h3-collect.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  collect-verified-private-kaggle-results:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      KAGGLE_KERNEL_ID: gamagekasun/fte-dreamkick-h3-44116299561-4132f6c6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Confirm private Kaggle account credentials exist
+        id: ready
+        run: |
+          if [ -z "$KAGGLE_API_TOKEN" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo 'No Kaggle secret configured: no result check possible.'
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Query ONLY this private notebook and download only if complete
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          python -m pip install --quiet 'kaggle>=1.7,<2' 'six>=1.16,<2'
+          mkdir -p output/dream-kick-h3
+          set +e
+          kaggle kernels status "$KAGGLE_KERNEL_ID" > output/dream-kick-h3/KAGGLE_STATUS.txt 2>&1
+          result=$?
+          set -e
+          sed -E 's/(token|key|secret)[^ ]*/[redacted]/gi' output/dream-kick-h3/KAGGLE_STATUS.txt
+          if [ "$result" -ne 0 ]; then
+            echo 'Kaggle status query failed; no H3 output claim.'
+            exit 0
+          fi
+          if grep -Eiq 'complete|success|error|failed|cancelled' output/dream-kick-h3/KAGGLE_STATUS.txt; then
+            kaggle kernels output "$KAGGLE_KERNEL_ID" -p output/dream-kick-h3 -o
+            if find output/dream-kick-h3 -name 'Funny_Toon_Ever_Dream_Kick_ACTUAL_H3.mp4' | grep -q . ; then
+              python - <<'PY'
+          import json
+          from pathlib import Path
+          videos=list(Path('output/dream-kick-h3').rglob('Funny_Toon_Ever_Dream_Kick_ACTUAL_H3.mp4'))
+          reports=list(Path('output/dream-kick-h3').rglob('RESULT.json'))
+          assert videos and reports
+          data=json.loads(reports[0].read_text())
+          assert data.get('h3_inference_verified') is True and data.get('status')=='completed'
+          print('ACTUAL MINIMAX H3 RESULT FILE AND MANIFEST EXIST; ready for video QA')
+          PY
+            else
+              echo 'Kaggle finished but expected final actual H3 MP4 missing.'
+            fi
+          else
+            echo 'Notebook not finished; model video is not yet available. Re-run collection later.'
+          fi
+      - name: Upload truthful status and any actual files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-Dream-Kick-Kaggle-H3-Actual-Results-If-Finished
+          path: output/dream-kick-h3/
+          if-no-files-found: warn
+          retention-days: 7
+
+# H3 collection check requested 2026-11-17 21:47 Asia/Colombo; no new GPU job submitted.

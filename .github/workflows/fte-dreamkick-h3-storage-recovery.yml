@@ -1,0 +1,42 @@
+name: FTE Dream Kick H3 — Exact Singularity Storage Recovery (CPU-only)
+on:
+  push:
+    branches: [feature/fte-dreamkick-h3-storage-recovery-20261118]
+    paths:
+      - 'dreamkick-h3/**'
+      - '.github/workflows/fte-dreamkick-h3-storage-recovery.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preflight-no-gpu:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact H3 Singularity profile, cache checks and old worker compilation
+        run: |
+          python -m py_compile dreamkick-h3/gpu_job.py dreamkick-h3/storage_guard.py
+          python -m unittest discover -s dreamkick-h3 -p test_storage_guard.py -v
+          python dreamkick-h3/storage_guard.py --cache-root /tmp/fte-h3-no-preinstalled-models --out /tmp/FTE_H3_STORAGE_READINESS.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          g=Path('dreamkick-h3/gpu_job.py').read_text()
+          d=json.loads(Path('/tmp/FTE_H3_STORAGE_READINESS.json').read_text())
+          assert d['cache_complete'] is False and d['gpu_started'] is False
+          assert 'H3_SINGULARITY_DIFFUSION_SPECS' in g
+          assert 'FTE_H3_ALLOW_DIRECT_DOWNLOAD' in g
+          assert 'h3_inference_verified' in g
+          assert 'funnytoonever' in g and 'vid.best' not in g
+          print('H3_CPU_GATE_PASSED: NO GPU, no model weights, no fake MP4')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FTE-DreamKick-H3-CPU-Storage-Safety
+          path: /tmp/FTE_H3_STORAGE_READINESS.json
+          retention-days: 7
+          if-no-files-found: error
