@@ -5,7 +5,14 @@ Input: 9:16 2D pigtail-girl + white bald boy refs. Two 5-second scenes.
 import sys,os,subprocess,time,json,math,traceback,shutil
 from pathlib import Path
 WORK=Path('/kaggle/working') if Path('/kaggle/working').is_dir() else Path.cwd()
-ROOT=Path('/kaggle/tmp') if Path('/kaggle/tmp').is_dir() else WORK
+def choose_model_root():
+ # Kaggle may expose a separate large scratch filesystem. Probe actual free
+ # bytes instead of assuming /kaggle/tmp exists or that T4 VRAM is pooled.
+ for p in (Path('/kaggle/temp'),Path('/kaggle/tmp'),Path('/tmp'),WORK):
+  if p.is_dir() and os.access(p,os.W_OK) and shutil.disk_usage(p).free>=50*2**30:
+   return p
+ return WORK  # storage guard below refuses insufficient space before downloads
+ROOT=choose_model_root()
 OUT=WORK/'fte_dreamkick_h3'; OUT.mkdir(parents=True,exist_ok=True)
 REPORT=OUT/'RESULT.json'
 START=time.monotonic()
@@ -91,7 +98,7 @@ def prepare_model_storage(checkout):
    else: pass
    if not target.is_symlink():target.symlink_to(source/directory,target_is_directory=True)
   return {'mode':'private_kaggle_dataset','source':str(source),'files':len(required)}
- free_gib=round(shutil.disk_usage(WORK).free/2**30,2)
+ free_gib=round(shutil.disk_usage(model_dir).free/2**30,2)
  # Guardrail only; actual checkpoint sizes vary. No guarantee 50 GiB suffices.
  if free_gib<50:
   raise RuntimeError(
