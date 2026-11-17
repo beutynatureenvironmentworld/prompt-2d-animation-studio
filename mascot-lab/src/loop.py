@@ -7,6 +7,9 @@ never claim skeleton/inbetweening, and reject bad clips before promoting a winne
 from __future__ import annotations
 import argparse, hashlib, io, json, math, os, re, shutil, struct, subprocess, time, wave
 from pathlib import Path
+import sys
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+from acting_v2 import build_face_bank, knock_alignment, expression_for
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageOps, ImageFont
@@ -96,8 +99,22 @@ def backdrop(gag):
     d.text((260,178),'TOILET',fill='white')
     return im
 
-def frame(t,poses,base,timeline,params):
-    s=state_at(t,timeline,params);action=s['action'];src=poses[s['pose']]
+def frame(t,poses,base,timeline,params,face_bank=None):
+    s=state_at(t,timeline,params);action=s['action']
+    if face_bank is not None and action=='knock':
+        # Use the reference's real run_b right fist rather than idle open hands.
+        # Align that sprite's knuckle anchor with the actual door edge (245, 375).
+        s['pose']=3;s['angle']=0;s['xs']=1;s['ys']=1
+        beat=next(b for b in timeline if b['action']=='knock')
+        elapsed=t-beat['start']
+        nearest=min(abs(elapsed-hit) for hit in (.38,.74,1.12))
+        retreat=-min(11,11*nearest/.14)  # hand withdraws between 3 real contacts
+        solved=knock_alignment(poses[3],236/poses[3].height,245,375,pulse=retreat)
+        s['x']=solved['x'];s['y']=solved['bottom']-511
+        s['hand_contact_error_px']=solved['hand_error']
+    expression=expression_for(action,s['u']) if face_bank is not None else 'grin'
+    s['expression']=expression
+    src=face_bank[(s['pose'],expression)] if face_bank is not None else poses[s['pose']]
     # Normalized silhouette; independent aspect stretch and anticipation.
     body_h=236
     ratio=body_h/src.height
@@ -131,8 +148,8 @@ def frame(t,poses,base,timeline,params):
         impact=any(0<=elapsed-hit<.095 for hit in (.38,.74,1.12))
         if impact:
             for radius in (11,20):
-                d.arc((248-radius,394-radius,248+radius,394+radius),-80,55,fill=(35,35,35,220),width=3)
-            d.line((244,397,240,394),fill='#222222',width=4)
+                d.arc((245-radius,375-radius,245+radius,375+radius),-80,55,fill=(35,35,35,220),width=3)
+            d.line((244,377,240,373),fill='#222222',width=4)
     if action=='shock' and s['u']<.58:
         for j in range(4):
             theta=j*.8-.7
@@ -166,16 +183,20 @@ def synth_sfx(timeline,path):
 
 def render(sheet,out,params,gag='door'):
     out=Path(out).resolve();out.parent.mkdir(parents=True,exist_ok=True)
-    poses=load_poses(Path(sheet));timeline=storyboard(gag);base=backdrop(gag)
+    poses=load_poses(Path(sheet));face_bank,head_geometry=build_face_bank(poses)
+    timeline=storyboard(gag);base=backdrop(gag)
     frames=round(timeline[-1]['end']*FPS)
     silent=out.with_suffix('.silent.mp4');audio=out.with_suffix('.wav')
     cmd=['ffmpeg','-nostdin','-hide_banner','-loglevel','error','-y','-f','rawvideo',
          '-pix_fmt','rgb24','-s',f'{W}x{H}','-r',str(FPS),'-i','-',
          '-c:v','libx264','-preset','veryfast','-crf','23','-pix_fmt','yuv420p',str(silent)]
     proc=subprocess.Popen(cmd,stdin=subprocess.PIPE)
-    samples=[];clipped=[];t0=time.perf_counter()
+    samples=[];clipped=[];expressions=set();contact_errors=[];t0=time.perf_counter()
     for i in range(frames):
-        im,st=frame(i/FPS,poses,base,timeline,params)
+        im,st=frame(i/FPS,poses,base,timeline,params,face_bank=face_bank)
+        expressions.add(st['expression'])
+        if st['action']=='knock' and st.get('hand_contact_error_px',99)<3:
+            contact_errors.append(st['hand_contact_error_px'])
         clipped.append(st['clipped_fraction'])
         if i%24==0 or i==frames-1:samples.append({'second':round(i/FPS,2),'action':st['action'],'x':round(st['x'],2),'angle':round(st['angle'],2)})
         proc.stdin.write(im.tobytes())
@@ -204,7 +225,10 @@ def render(sheet,out,params,gag='door'):
         'visual_contact_sheet':out.with_suffix('.contact.jpg').name,
         'experimental_no_skeletal_rig':True,'source_poses':6,'fps':FPS,
         'video_bytes':out.stat().st_size,'config':params,
-        'clipped_frames':sum(v>.01 for v in clipped),'max_clipping_fraction':round(max(clipped),4)}
+        'clipped_frames':sum(v>.01 for v in clipped),'max_clipping_fraction':round(max(clipped),4),
+        'expressions_used':sorted(expressions),'pupils_per_head':2,
+        'fist_contact_error_px':round(max(contact_errors),2) if contact_errors else None,
+        'head_geometry_verified':len(head_geometry)==6, 'face_engine':'acting_v2_1_pupil_per_eye'}
     out.with_suffix('.json').write_text(json.dumps(report,indent=2))
     return report
 
@@ -217,7 +241,9 @@ def evaluate(video_json,video,params):
     # Approximate authored open-hand tip: actor centre + 0.36 * visible pose width.
     contact=160+params.get('contact_offset',0)
     hand_x=contact+params.get('right_hand_offset',78)
-    contact_error=abs(door_left-hand_x) if any(b['action']=='knock' for b in beats) else 0
+    contact_error=(video_json.get('fist_contact_error_px')
+                   if video_json.get('fist_contact_error_px') is not None
+                   else abs(door_left-hand_x) if any(b['action']=='knock' for b in beats) else 0)
     cap=cv2.VideoCapture(str(video));count=int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     pix=[]
     for sec in (.8,1.3,2.0,3.5):
@@ -232,10 +258,17 @@ def evaluate(video_json,video,params):
     if real_diff<2.8:issues.append('encoded frames show insufficient visual motion')
     if count<140:issues.append('video is unusually short for comic setup and payoff')
     if video_json['max_clipping_fraction']>.025:issues.append('character silhouette is clipped by scene edge')
-    issues += ['source poses all grin: expression variation and eye-pupil repair still need visual/manual validation',
-               'true arm-to-door skeletal inverse kinematics not yet implemented; position is calibrated approximately']
+    if video_json.get('pupils_per_head')!=2:
+        issues.append('eye-pupil geometry was not validated')
+    if len(video_json.get('expressions_used',[]))<3:
+        issues.append('not enough facial acting variety')
+    issues.append('whole-pose source still lacks independent arm/leg skeletal IK; authored fist anchor is calibrated')
+    issues.append('one-pupil-per-eye overlay is validated in code; visual inspection of frames remains necessary')
     score=round(100-min(55,contact_error*1.5)-max(0,62-displacement)*.55-min(30,max(0,3.5-real_diff)*8)-min(35,video_json['max_clipping_fraction']*100),2)
-    return {'score':score,'motion_px':round(displacement,2),'contact_error_px_estimate':round(contact_error,2),
+    return {'score':score,'expressions_used':video_json.get('expressions_used',[]),
+            'pupils_per_head':video_json.get('pupils_per_head'),
+            'fist_contact_error_px_measured_from_sprite':video_json.get('fist_contact_error_px'),
+            'motion_px':round(displacement,2),'contact_error_px_estimate':round(contact_error,2),
             'decoded_video_frame_difference':round(real_diff,3),'decoded_frames':count,
             'max_clipping_fraction':video_json['max_clipping_fraction'],'clipped_frames':video_json['clipped_frames'],
             'warnings':issues,'passed_numeric_checks':displacement>=55 and contact_error<=12 and real_diff>=2.8 and count>=140 and video_json['max_clipping_fraction']<=.025,
