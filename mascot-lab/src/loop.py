@@ -108,7 +108,8 @@ def frame(t,poses,base,timeline,params,face_bank=None):
         beat=next(b for b in timeline if b['action']=='knock')
         elapsed=t-beat['start']
         nearest=min(abs(elapsed-hit) for hit in (.38,.74,1.12))
-        retreat=-min(11,11*nearest/.14)  # hand withdraws between 3 real contacts
+        recoil=float(params.get('knock_recoil_px',11))
+        retreat=-min(recoil,recoil*nearest/.14)  # hand withdraws between 3 real contacts
         solved=knock_alignment(poses[3],236/poses[3].height,245,375,pulse=retreat)
         s['x']=solved['x'];s['y']=solved['bottom']-511
         s['hand_contact_error_px']=solved['hand_error']
@@ -250,11 +251,23 @@ def evaluate(video_json,video,params):
         cap.set(cv2.CAP_PROP_POS_MSEC,sec*1000)
         ok,im=cap.read()
         if ok:pix.append(cv2.cvtColor(im,cv2.COLOR_BGR2GRAY))
+    # Decode ACTUAL fist movement across knock contact and recoil frames.
+    knock=next((b for b in beats if b['action']=='knock'),None)
+    contact_change=0.0
+    if knock:
+        views=[]
+        for sec in (knock['start']+.38,knock['start']+.55):
+            cap.set(cv2.CAP_PROP_POS_MSEC,sec*1000)
+            ok,im=cap.read()
+            if ok:views.append(cv2.cvtColor(im[323:438,150:255],cv2.COLOR_BGR2GRAY))
+        if len(views)==2:
+            contact_change=float(np.abs(views[0].astype(np.float32)-views[1].astype(np.float32)).mean())
     cap.release()
     real_diff=float(np.mean(np.abs(pix[0].astype(np.float32)-pix[2].astype(np.float32)))) if len(pix)>2 else 0
     issues=[]
     if displacement<55:issues.append('run does not travel far enough toward the door')
     if contact_error>12:issues.append('authored hand contact anchor is not close to door edge')
+    if knock and contact_change<1.5:issues.append('encoded fist has insufficient recoil/knock movement')
     if real_diff<2.8:issues.append('encoded frames show insufficient visual motion')
     if count<140:issues.append('video is unusually short for comic setup and payoff')
     if video_json['max_clipping_fraction']>.025:issues.append('character silhouette is clipped by scene edge')
@@ -264,12 +277,13 @@ def evaluate(video_json,video,params):
         issues.append('not enough facial acting variety')
     issues.append('whole-pose source still lacks independent arm/leg skeletal IK; authored fist anchor is calibrated')
     issues.append('one-pupil-per-eye overlay is validated in code; visual inspection of frames remains necessary')
-    score=round(100-min(55,contact_error*1.5)-max(0,62-displacement)*.55-min(30,max(0,3.5-real_diff)*8)-min(35,video_json['max_clipping_fraction']*100),2)
+    score=round(100-min(55,contact_error*1.5)-max(0,62-displacement)*.55-min(30,max(0,3.5-real_diff)*8)-min(35,video_json['max_clipping_fraction']*100)+min(3,contact_change*.12),2)
     return {'score':score,'expressions_used':video_json.get('expressions_used',[]),
             'pupils_per_head':video_json.get('pupils_per_head'),
             'fist_contact_error_px_measured_from_sprite':video_json.get('fist_contact_error_px'),
             'motion_px':round(displacement,2),'contact_error_px_estimate':round(contact_error,2),
-            'decoded_video_frame_difference':round(real_diff,3),'decoded_frames':count,
+            'decoded_video_frame_difference':round(real_diff,3),
+            'decoded_fist_recoil_difference':round(contact_change,3),'decoded_frames':count,
             'max_clipping_fraction':video_json['max_clipping_fraction'],'clipped_frames':video_json['clipped_frames'],
             'warnings':issues,'passed_numeric_checks':displacement>=55 and contact_error<=12 and real_diff>=2.8 and count>=140 and video_json['max_clipping_fraction']<=.025,
             'metrics_are_heuristic_not_human_visual_review':True}
@@ -277,7 +291,9 @@ def evaluate(video_json,video,params):
 def loop(sheet,out,config,gag='door'):
     out=Path(out);out.mkdir(parents=True,exist_ok=True)
     base=json.loads(Path(config).read_text());
-    candidates=[dict(base),{**base,'contact_offset':base.get('contact_offset',0)+7,'right_hand_offset':base.get('right_hand_offset',78)-3,'start_x':110,'slip_x':175}]
+    candidates=[{**base,'knock_recoil_px':11},
+                {**base,'knock_recoil_px':17,'contact_offset':base.get('contact_offset',0)+7,
+                 'right_hand_offset':base.get('right_hand_offset',78)-3,'start_x':110,'slip_x':175}]
     results=[]
     for i,settings in enumerate(candidates):
         video=out/f'candidate_{i}.mp4'
