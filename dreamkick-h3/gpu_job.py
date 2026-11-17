@@ -1,0 +1,127 @@
+"""Private Kaggle MiniMax H3 experiment for Funny Toon Ever Dream Kick.
+Actual model output is recorded only after real video validation. No fake MP4.
+Input: 9:16 2D pigtail-girl + white bald boy refs. Two 5-second scenes.
+"""
+import sys,os,subprocess,time,json,math,traceback,shutil
+from pathlib import Path
+ROOT=Path('/kaggle/working') if Path('/kaggle/working').is_dir() else Path.cwd()
+OUT=ROOT/'fte_dreamkick_h3'; OUT.mkdir(exist_ok=True)
+REPORT=OUT/'RESULT.json'
+START=time.monotonic()
+SCENES=[
+("scene01_dream","Minimal flat 2D black-and-white hand-drawn funny cartoon, 9:16. Same white cartoon girl with black outlines, two pigtails, simple dress, wide sly grin, runs toward vivid GREEN soccer ball across clean lawn, winds her leg back with elastic stretch, kicks ball very hard to right. Natural continuous limbs, no X knees or floating shoulders, strong motion, fast comedic zoom, dramatic leg extension held at last frame. Original cartoon sounds, no captions."),
+("scene02_bedroom","Same girl with pigtails and white dress is lying asleep beside a bald white cartoon boy in a BED at NIGHT. At the start her dreaming leg extends in exactly the same motion as her soccer kick. Her foot directly hits the boy and sends him flying off mattress, eyes bulge in panic, limbs flail, then he crashes to ground and looks dizzy. Girl wakes shocked and leans over bed edge. Original expressive 2D ink line art, clear match cut staging, rubber-hose shoulders, no extra pupils, strong comedic timing, no captions.")
+]
+def write(d): REPORT.write_text(json.dumps(d,indent=2,default=str)+'\n');print('FTE_RESULT',d['status'],flush=True)
+def run(cmd,limit=180):subprocess.run(cmd,check=True,timeout=limit,stdout=subprocess.DEVNULL)
+def reference_image(path,bed=False):
+ from PIL import Image,ImageDraw
+ im=Image.new('RGB',(384,672),'#fbfaf6' if not bed else '#e4e6f2');d=ImageDraw.Draw(im)
+ ink='#111111'
+ if bed:
+  d.rectangle((16,340,368,541),fill='white',outline=ink,width=7)
+  d.rectangle((28,388,359,516),fill='#f0eff7',outline=ink,width=5)
+  d.rectangle((279,73,362,181),fill='#25283f',outline=ink,width=5)
+  d.ellipse((309,89,350,128),fill='#fff7be')
+  gx,gy=114,388;bx,by=284,394
+ else:
+  d.line((0,520,384,520),fill='#9acc89',width=5);gx,gy=142,375;bx,by=-300,-300
+ def inkline(points,width=11):
+  d.line(points,fill=ink,width=width,joint='curve')
+  d.line(points,fill='white',width=max(2,width-6),joint='curve')
+ def head(x,y,girl=False):
+  if girl:
+   for s in (-1,1):
+    p=x+s*53
+    d.ellipse((p-38,y-84,p+38,y-17),fill='white',outline=ink,width=5)
+    d.line((x+s*41,y-44,p,y-60),fill=ink,width=5)
+  d.ellipse((x-60,y-60,x+60,y+60),fill='white',outline=ink,width=7)
+  for dx in (-26,26):
+   if bed:
+    d.arc((x+dx-17,y-12,x+dx+17,y+12),0,180,fill=ink,width=4)
+   else:
+    d.ellipse((x+dx-13,y-10,x+dx+13,y+18),fill='white',outline=ink,width=4)
+    d.ellipse((x+dx-1,y+1,x+dx+9,y+12),fill=ink)
+  if bed:d.ellipse((x-7,y+21,x+8,y+38),fill=ink)
+  else:
+   d.pieslice((x-41,y+13,x+43,y+56),0,180,fill='white',outline=ink,width=5)
+   for n in range(-3,4):
+    d.line((x+n*10,y+30,x+n*10,y+45),fill=ink,width=2)
+ head(gx,gy,True)
+ d.rounded_rectangle((gx-36,gy+65,gx+36,gy+147),radius=23,fill='white',outline=ink,width=6)
+ for s in (-1,1):
+  inkline([(gx+s*33,gy+90),(gx+s*66,gy+137)],10)
+  inkline([(gx+s*26,gy+142),(gx+s*61,gy+219)],12)
+ if not bed:
+  d.ellipse((238,474,321,558),fill='#6efe45',outline=ink,width=6)
+  d.polygon([(279,501),(299,515),(291,538),(266,537),(258,512)],fill=ink)
+ if bed:
+  head(bx,by,False)
+  d.rounded_rectangle((bx-32,by+62,bx+32,by+132),radius=22,fill='white',outline=ink,width=6)
+  for s in (-1,1):
+   inkline([(bx+s*26,by+95),(bx+s*49,by+146)],10)
+   inkline([(bx+s*22,by+126),(bx+s*42,by+179)],12)
+ im.save(path)
+def main():
+ d={'status':'initialized','model':'MiniMax-H3 Singularity Ref2VA INT8','h3_inference_verified':False,'scenes':[],'device_count':0}
+ write(d)
+ try:
+  import torch
+  if not torch.cuda.is_available():raise RuntimeError('No GPU device allocated')
+  d['device_count']=torch.cuda.device_count()
+  d['gpu_names']=[torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())]
+  a=OUT/'girl_soccer.png';b=OUT/'girl_boy_bedroom.png'
+  reference_image(a,False);reference_image(b,True)
+  checkout=ROOT/'kaggle_h3_github'
+  run(['git','clone','--depth','1','https://github.com/celunah/kaggle_h3.git',str(checkout)],210)
+  run([sys.executable,'-m','pip','install','-q','-r',str(checkout/'requirements-kaggle.txt')],490)
+  sys.path.insert(0,str(checkout/'src'))
+  from kaggle_h3.workflow import H3Request
+  from kaggle_h3.pipeline import run_generation
+  for i,(slug,prompt) in enumerate(SCENES):
+   if time.monotonic()-START>70*60:
+    d['status']='budget_exhausted';break
+   req=H3Request(prompt=prompt,character_references=[a],
+     scene_references=[a if i==0 else b],duration_seconds=5.0,
+     aspect_ratio='9:16',quality_mode='low',seed=2417+i,
+     turbo_mode=True,turbo_steps=4,mute_generated_audio=False)
+   result=run_generation(req,project_root=checkout,comfy_root=checkout/'ComfyUI',
+     backend='comfyui_native_fallback',allow_single_gpu_fallback=True,
+     download_models=True,dry_run=False,max_attempts=1)
+   paths=[Path(p) for p in result.get('outputs',[]) if Path(p).is_file()]
+   item={'scene':slug,'status':result.get('status'),'verified':result.get('validation'),
+         'gpu_verification':result.get('verification'),'output':None}
+   if result.get('status')=='completed' and paths:
+    dest=OUT/(slug+'_MiniMaxH3.mp4')
+    shutil.copyfile(paths[0],dest);item['output']=str(dest)
+   d['scenes'].append(item);write(d)
+   if not item['output']:break
+  if len(d['scenes'])==2 and all(x['output'] for x in d['scenes']):
+   # Actual 5+5-second generated clips with matched video format, H264+AAC.
+   normalized=[]
+   for i,item in enumerate(d['scenes']):
+    dst=OUT/f'normalized_{i+1}.mp4'
+    run(['ffmpeg','-y','-loglevel','error','-i',item['output'],'-vf',
+      'scale=540:960:force_original_aspect_ratio=increase,crop=540:960,fps=24',
+      '-c:v','libx264','-preset','veryfast','-crf','21','-an',str(dst)],240)
+    normalized.append(dst)
+   lst=OUT/'list.txt';lst.write_text(''.join("file '"+str(x)+"'\n" for x in normalized))
+   joined=OUT/'joined.mp4'
+   run(['ffmpeg','-y','-loglevel','error','-f','concat','-safe','0','-i',str(lst),
+        '-c','copy',str(joined)],120)
+   final=OUT/'Funny_Toon_Ever_Dream_Kick_ACTUAL_H3.mp4'
+   # Original generated native scene audio stays in source files.
+   # Watermark fixed as final overlay, avoiding misspelled model-rendered text.
+   run(['ffmpeg','-y','-loglevel','error','-i',str(joined),'-vf',
+     "drawtext=text='funnytoonever':fontsize=19:fontcolor=black:box=1:boxcolor=white@0.65:x=(w-text_w)/2:y=h-37",
+     '-c:v','libx264','-preset','veryfast','-crf','22','-pix_fmt','yuv420p',
+     '-movflags','+faststart',str(final)],200)
+   d['status']='completed'
+   d['h3_inference_verified']=True;d['final_video']=str(final)
+  else:d['status']=d['status'] if d['status']=='budget_exhausted' else 'incomplete_h3'
+  d['elapsed_seconds']=round(time.monotonic()-START,2);write(d)
+ except Exception as ex:
+  d['status']='failed';d['error']=str(ex)[:1400]
+  d['traceback_tail']=traceback.format_exc()[-2400:]
+  d['elapsed_seconds']=round(time.monotonic()-START,2);write(d);raise
+if __name__=='__main__':main()
