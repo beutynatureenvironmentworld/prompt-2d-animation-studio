@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feature/fte-v3-skeletal-motion
+      - main
     paths:
       - 'mascot-lab/v3/**'
       - '.github/workflows/mascot-v3-ik-demo.yml'
