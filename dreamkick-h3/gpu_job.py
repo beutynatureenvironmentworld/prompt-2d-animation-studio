@@ -144,7 +144,7 @@ def main():
     dst=OUT/f'normalized_{i+1}.mp4'
     run(['ffmpeg','-y','-loglevel','error','-i',item['output'],'-vf',
       'scale=540:960:force_original_aspect_ratio=increase,crop=540:960,fps=24',
-      '-c:v','libx264','-preset','veryfast','-crf','21','-an',str(dst)],240)
+      '-c:v','libx264','-preset','veryfast','-crf','21','-c:a','aac','-b:a','128k','-ar','44100',str(dst)],240)
     normalized.append(dst)
    lst=OUT/'list.txt';lst.write_text(''.join("file '"+str(x)+"'\n" for x in normalized))
    joined=OUT/'joined.mp4'
@@ -169,10 +169,20 @@ def main():
    with wave.open(str(audio),'wb') as w:
     w.setnchannels(1);w.setsampwidth(2);w.setframerate(SR)
     w.writeframes((np.tanh(y)*29000).astype('<i2').tobytes())
-   run(['ffmpeg','-y','-loglevel','error','-i',str(joined),'-i',str(audio),'-vf',
+   run(['ffmpeg','-y','-loglevel','error','-i',str(joined),'-i',str(audio),
+     '-filter_complex','[0:a:0][1:a:0]amix=inputs=2:duration=first:weights=1 0.68:normalize=0[a]',
+     '-map','0:v:0','-map','[a]','-vf',
      "drawtext=text='funnytoonever':fontsize=19:fontcolor=black:box=1:boxcolor=white@0.65:x=(w-text_w)/2:y=h-37",
      '-c:v','libx264','-preset','veryfast','-crf','22','-pix_fmt','yuv420p',
-     '-c:a','aac','-b:a','96k','-shortest','-movflags','+faststart',str(final)],200)
+     '-c:a','aac','-b:a','128k','-shortest','-movflags','+faststart',str(final)],200)
+   # Do not mark an MP4 production-ready without validating video, portrait ratio and audio.
+   info=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(final)],text=True))
+   v=next((s for s in info.get('streams',[]) if s.get('codec_type')=='video'),None)
+   audio_ok=any(s.get('codec_type')=='audio' for s in info.get('streams',[]))
+   duration=float(info.get('format',{}).get('duration',0))
+   if not v or int(v['width'])*16!=int(v['height'])*9 or not audio_ok or duration<8:
+    raise RuntimeError('Final H3 QA failed: require 9:16 video, >=8 seconds and real audio stream')
+   d['final_media_qa']={'width':v['width'],'height':v['height'],'seconds':duration,'has_audio':audio_ok}
    d['status']='completed'
    d['h3_inference_verified']=True;d['final_video']=str(final)
   else:d['status']=d['status'] if d['status']=='budget_exhausted' else 'incomplete_h3'
