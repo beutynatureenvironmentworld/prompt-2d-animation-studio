@@ -67,7 +67,7 @@ jobs:
           source=(root/'gpu_job.py').read_bytes()
           slug='fte-dreamkick-h3-'+os.environ['GITHUB_RUN_ID']+'-'+hashlib.sha256(source).hexdigest()[:8]
           kid=os.environ['KAGGLE_USERNAME']+'/'+slug
-          config={'id':kid,'title':'FTE Dream Kick MiniMax H3 experimental',
+          config={'id':kid,'title':slug,
                   'code_file':'gpu_job.py','language':'python','kernel_type':'script',
                   'is_private':True,'enable_gpu':True,'machine_shape':'NvidiaTeslaT4',
                   'enable_internet':True,'dataset_sources':[],'kernel_sources':[],
