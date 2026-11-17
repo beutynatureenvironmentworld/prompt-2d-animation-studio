@@ -77,10 +77,15 @@ def prepare_model_storage(checkout):
  datasets must include all shared and Ref2VA diffusion checkpoints.
  """
  from kaggle_h3.bootstrap import required_model_files
+ from kaggle_h3.model_manager import H3_SINGULARITY_DIFFUSION_SPECS
  model_dir=checkout/'ComfyUI'/'models'
  model_dir.mkdir(parents=True,exist_ok=True)
  source=Path(os.environ.get('FTE_H3_MODEL_DATASET','/kaggle/input/fte-h3-models/models'))
- required=required_model_files('Ref2VA',include_diffusion=True)
+ # This job explicitly requests Singularity Ref2VA INT8 (not base FP8).
+ # The upstream required_model_files(include_diffusion=True) is the base checkpoint;
+ # using it here would reject a correct private cache and waste Kaggle storage.
+ required=required_model_files('Ref2VA',include_diffusion=False)
+ required['singularity_ref2va_int8']=('diffusion_models',H3_SINGULARITY_DIFFUSION_SPECS['Ref2VA'].filename)
  if source.is_dir():
   missing=[str(Path(directory)/filename) for directory,filename in required.values()
            if not (source/directory/filename).is_file()]
@@ -99,6 +104,13 @@ def prepare_model_storage(checkout):
    else: pass
    if not target.is_symlink():target.symlink_to(source/directory,target_is_directory=True)
   return {'mode':'private_kaggle_dataset','source':str(source),'files':len(required)}
+ # Refuse another automatic quota-consuming >20GiB model download after the
+ # verified ENOSPC failure. An explicit override is needed and still must pass
+ # the conservative free-space check below.
+ if os.environ.get('FTE_H3_ALLOW_DIRECT_DOWNLOAD','0')!='1':
+  raise RuntimeError('H3 PRIVATE MODEL CACHE MISSING: stage exact four assets as '+
+   '/kaggle/input/fte-h3-models/models and run storage_guard.py with GPU off. '+
+   'FTE_H3_ALLOW_DIRECT_DOWNLOAD=1 opts into high-disk direct download, not guaranteed.')
  free_gib=round(shutil.disk_usage(model_dir).free/2**30,2)
  # Guardrail only; actual checkpoint sizes vary. No guarantee 50 GiB suffices.
  if free_gib<50:
