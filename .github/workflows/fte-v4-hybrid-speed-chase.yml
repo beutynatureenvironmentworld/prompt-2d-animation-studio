@@ -1,0 +1,80 @@
+name: FTE V4 — Speed-Chase Legs and Smooth V3 Arms
+on:
+  push:
+    branches: [feature/fte-v4-hybrid-speed-chase, main]
+    paths:
+      - 'mascot-lab/v4/**'
+      - '.github/workflows/fte-v4-hybrid-speed-chase.yml'
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Locked-door comedy prompt (validated template; not arbitrary AI choreography)'
+        required: false
+        default: 'A cheeky mascot dashes to the door, knocks and slips, then grins'
+        type: string
+permissions:
+  contents: read
+jobs:
+  hybrid-cpu-verified:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      FTE_PROMPT: ${{ inputs.prompt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install offline vector/cartoon requirements
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          python -m pip install --no-cache-dir -r mascot-lab/v4/requirements.txt
+      - name: Extract authentic permanent mascot head, no AI redraw
+        run: |
+          python mascot-lab/v4/src/extract_canonical.py \
+            --sheet mascot-lab/config/permanent_mascot.webp \
+            --output mascot-lab/v4/assets/canonical_neutral_pose.png
+      - name: Original V3 and V4 hybrid regression tests
+        run: |
+          python -m unittest discover -s mascot-lab/v4/tests -v
+      - name: Build validated story and actual 24fps MP4
+        run: |
+          cd mascot-lab/v4
+          if [ -z "$FTE_PROMPT" ]; then FTE_PROMPT='A cheeky mascot rushes to the toilet door and slips'; fi
+          python src/v3_director.py --prompt "$FTE_PROMPT" --output output/MOTION_PLAN.json
+          python src/render.py \
+            --sheet assets/canonical_neutral_pose.png \
+            --plan output/MOTION_PLAN.json \
+            --output output/Funny_Toon_Ever_V4_Speed_Chase_Hybrid.mp4
+          python src/quality_v4.py \
+            --video output/Funny_Toon_Ever_V4_Speed_Chase_Hybrid.mp4 \
+            --report output/Funny_Toon_Ever_V4_Speed_Chase_Hybrid.json
+      - name: Confirm actual video codec and geometry report
+        run: |
+          cd mascot-lab/v4
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json \
+            output/Funny_Toon_Ever_V4_Speed_Chase_Hybrid.mp4
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('output/Funny_Toon_Ever_V4_Speed_Chase_Hybrid.json').read_text())
+          assert d['leg_lane_crossings']==0 and d['leg_samples']==276
+          assert d['visible_elbow_knee_circles'] is False
+          assert len(d['face_states_used'])>=6
+          assert min(d['run_pose_counts'].values())>0
+          assert d['knock_contact_max_error_px']<=9
+          assert d['actual_ai_inference_used'] is False
+          print('VERIFIED_V4_HYBRID_ACTUAL_VIDEO_AND_SAFE_GEOMETRY',d['run_pose_counts'])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Funny-Toon-Ever-V4-Speed-Chase-Hybrid-Demo
+          path: |
+            mascot-lab/v4/output/Funny_Toon_Ever_V4_Speed_Chase_Hybrid.mp4
+            mascot-lab/v4/output/Funny_Toon_Ever_V4_Speed_Chase_Hybrid.json
+            mascot-lab/v4/output/MOTION_PLAN.json
+            mascot-lab/v4/output/QUALITY_REPORT.json
+            mascot-lab/v4/output/ACTUAL_V4_FRAMES.jpg
+          if-no-files-found: warn
+          retention-days: 7
