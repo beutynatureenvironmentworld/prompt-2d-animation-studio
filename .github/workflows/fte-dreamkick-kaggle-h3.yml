@@ -76,7 +76,7 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('kernel_id='+kid+'\n')
           print('Private Kaggle kernel identifier:',kid)
           PY
-          kaggle kernels push -p /tmp/fte_h3_private_job --accelerator NvidiaTeslaT4 -t 5400
+          kaggle kernels push -p /tmp/fte_h3_private_job
           echo 'KAGGLE_JOB_SUBMITTED: submission is NOT proof of an H3 MP4.'
       - name: Display status/download instructions
         if: steps.access.outputs.ready == 'true'
