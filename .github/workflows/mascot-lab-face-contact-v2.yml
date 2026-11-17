@@ -1,0 +1,65 @@
+name: Funny Toon Ever Mascot V2 — Facial and Hand Contact Proof
+on:
+  push:
+    branches: [experiment/mascot-face-and-contact-v2]
+    paths:
+      - 'mascot-lab/src/**'
+      - 'mascot-lab/tests/**'
+      - '.github/workflows/mascot-lab-face-contact-v2.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verified-v2:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Install deterministic CPU tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install -q -r mascot-lab/requirements.txt
+      - name: All original and upgraded mascot tests
+        run: |
+          python -m unittest discover -s mascot-lab/tests -v
+      - name: Render actual original mascot six-pose with new facial acting and exact fist target
+        run: |
+          python mascot-lab/src/loop.py --sheet mascot-lab/config/permanent_mascot.webp \
+            --config mascot-lab/config/tuning.json --out mascot-lab/v2out --gag door --mode cycle
+      - name: Check real MP4, 2 eyes x 1 pupil and meaningful facial variety
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('mascot-lab/v2out')
+          q=json.loads((p/'LATEST_REPORT.json').read_text())
+          raw=json.loads((p/'candidate_0.json').read_text())
+          assert q['best']['passed_numeric_checks'],q
+          assert q['best']['fist_contact_error_px_measured_from_sprite'] is not None
+          assert q['best']['fist_contact_error_px_measured_from_sprite']<3
+          assert q['best']['pupils_per_head']==2
+          assert len(q['best']['expressions_used'])>=4
+          assert raw['head_geometry_verified']
+          assert (p/'LATEST_FRAMES.jpg').stat().st_size>10000
+          print('MASCOT_V2_TRUE_FRAMES_ACTING_GEOMETRY_QA_PASS',q['best'])
+          PY
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json mascot-lab/v2out/LATEST_VERIFIED.mp4
+      - name: Upload actual video and decoded-frame contact sheet for visual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mascot-v2-face-unique-pupils-fist-contact-video
+          path: |
+            mascot-lab/v2out/LATEST_VERIFIED.mp4
+            mascot-lab/v2out/LATEST_FRAMES.jpg
+            mascot-lab/v2out/LATEST_REPORT.json
+            mascot-lab/v2out/LATEST_REPORT.md
+            mascot-lab/v2out/candidate_0.json
+            mascot-lab/v2out/candidate_1.json
+            mascot-lab/v2out/candidate_0.mp4
+            mascot-lab/v2out/candidate_1.mp4
+          if-no-files-found: warn
+          retention-days: 7
