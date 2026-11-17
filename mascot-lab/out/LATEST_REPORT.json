@@ -1,21 +1,20 @@
 {
-  "gag": "prank",
+  "gag": "surprise",
   "best": {
-    "score": 97.62,
+    "score": 98.56,
     "expressions_used": [
-      "effort",
       "focus",
       "grin",
       "neutral",
       "shock"
     ],
     "pupils_per_head": 2,
-    "fist_contact_error_px_measured_from_sprite": 2.63,
+    "fist_contact_error_px_measured_from_sprite": null,
     "motion_px": 84.69,
-    "contact_error_px_estimate": 2.63,
+    "contact_error_px_estimate": 0,
     "decoded_video_frame_difference": 15.808,
-    "decoded_fist_recoil_difference": 63.387,
-    "decoded_frames": 170,
+    "decoded_fist_recoil_difference": 0.0,
+    "decoded_frames": 168,
     "max_clipping_fraction": 0.0144,
     "clipped_frames": 3,
     "warnings": [
@@ -30,16 +29,16 @@
     "right_hand_offset": 63,
     "start_x": 110,
     "slip_x": 175,
-    "knock_recoil_px": 17
+    "knock_recoil_px": 11
   },
   "candidates": [
     {
-      "score": 97.44,
+      "score": 98.56,
       "passed": true,
       "video": "candidate_0.mp4"
     },
     {
-      "score": 97.62,
+      "score": 98.56,
       "passed": true,
       "video": "candidate_1.mp4"
     }
