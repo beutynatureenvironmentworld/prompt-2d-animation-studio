@@ -1,0 +1,69 @@
+name: FTE V6 — Shoulder Repair and Color Garden Short
+on:
+  push:
+    branches: [feature/fte-v6-shoulder-garden, main]
+    paths:
+      - 'mascot-lab/v6/**'
+      - '.github/workflows/fte-v6-moon-garden.yml'
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Story caption prompt; choreography remains validated fixed moon-garden beats'
+        type: string
+        required: false
+        default: 'Our sly mascot rings the moon-garden wish bell and a magic flower blooms'
+permissions:
+  contents: read
+jobs:
+  garden-shoulder-qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    env:
+      STORY_PROMPT: ${{ inputs.prompt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install original CPU sound / drawing / video modules
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg libsndfile1
+          python -m pip install --no-cache-dir -r mascot-lab/v6/requirements.txt
+      - name: Copy unmodified V5 foundation only where V6 source is absent
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import shutil
+          root=Path('mascot-lab')
+          for segment in ('src','tests'):
+            dst=root/'v6'/segment
+            dst.mkdir(parents=True,exist_ok=True)
+            for f in (root/'v5'/segment).glob('*.py'):
+              target=dst/f.name
+              if not target.exists():shutil.copy2(f,target)
+          PY
+          python mascot-lab/v6/src/extract_canonical.py --sheet mascot-lab/config/permanent_mascot.webp --output mascot-lab/v6/assets/canonical_neutral_pose.png
+      - name: Run V3-V5 regression + new V6 shoulder/color/audio tests
+        run: python -m unittest discover -s mascot-lab/v6/tests -v
+      - name: Real 276-frame moon-garden animation and synthesized reactions
+        run: |
+          cd mascot-lab/v6
+          if [ -z "$STORY_PROMPT" ]; then STORY_PROMPT='Our sly mascot rings the magical garden wish bell, slips, and sees a flower bloom'; fi
+          python src/v3_director.py --prompt "$STORY_PROMPT" --output output/MOTION_PLAN.json
+          python src/render.py --plan output/MOTION_PLAN.json --sheet assets/canonical_neutral_pose.png --output output/Funny_Toon_Ever_V6_Moon_Garden.mp4
+          python src/quality_v6.py --video output/Funny_Toon_Ever_V6_Moon_Garden.mp4 --report output/Funny_Toon_Ever_V6_Moon_Garden.json
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height -of json output/Funny_Toon_Ever_V6_Moon_Garden.mp4
+      - name: Upload actual video, visual inspection sheet and verification JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-V6-Moon-Garden-Shoulder-Fix-Real-MP4
+          path: |
+            mascot-lab/v6/output/Funny_Toon_Ever_V6_Moon_Garden.mp4
+            mascot-lab/v6/output/Funny_Toon_Ever_V6_Moon_Garden.json
+            mascot-lab/v6/output/ACTUAL_V6_FRAMES.jpg
+            mascot-lab/v6/output/MOTION_PLAN.json
+            mascot-lab/v6/output/STORY_PROMPT.json
+            mascot-lab/v6/output/QUALITY_REPORT.json
+          if-no-files-found: warn
+          retention-days: 7
