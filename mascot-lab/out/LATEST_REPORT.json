@@ -1,8 +1,9 @@
 {
-  "gag": "race",
+  "gag": "door",
   "best": {
-    "score": 98.56,
+    "score": 97.62,
     "expressions_used": [
+      "effort",
       "focus",
       "grin",
       "neutral",
@@ -10,12 +11,12 @@
       "worried"
     ],
     "pupils_per_head": 2,
-    "fist_contact_error_px_measured_from_sprite": null,
-    "motion_px": 70.74,
-    "contact_error_px_estimate": 0,
-    "decoded_video_frame_difference": 15.395,
-    "decoded_fist_recoil_difference": 0.0,
-    "decoded_frames": 170,
+    "fist_contact_error_px_measured_from_sprite": 2.63,
+    "motion_px": 77.71,
+    "contact_error_px_estimate": 2.63,
+    "decoded_video_frame_difference": 15.611,
+    "decoded_fist_recoil_difference": 63.527,
+    "decoded_frames": 206,
     "max_clipping_fraction": 0.0144,
     "clipped_frames": 3,
     "warnings": [
@@ -26,20 +27,20 @@
     "metrics_are_heuristic_not_human_visual_review": true
   },
   "best_settings": {
-    "contact_offset": 21,
-    "right_hand_offset": 69,
+    "contact_offset": 28,
+    "right_hand_offset": 66,
     "start_x": 110,
     "slip_x": 175,
-    "knock_recoil_px": 11
+    "knock_recoil_px": 17
   },
   "candidates": [
     {
-      "score": 98.56,
+      "score": 97.44,
       "passed": true,
       "video": "candidate_0.mp4"
     },
     {
-      "score": 98.56,
+      "score": 97.62,
       "passed": true,
       "video": "candidate_1.mp4"
     }
