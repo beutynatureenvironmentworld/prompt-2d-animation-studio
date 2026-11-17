@@ -1,0 +1,97 @@
+name: FTE Dream Kick H3 — Kaggle CPU capacity preflight (zero GPU)
+on:
+  push:
+    branches: [feature/fte-dreamkick-h3-storage-recovery-20261118]
+    paths: ['.github/workflows/fte-h3-kaggle-cpu-capacity-probe.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect-real-kaggle-environment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    env:
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+    steps:
+      - name: Submit exactly one CPU-only storage and H3 model-cache probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p result /tmp/fte_h3_cpu_probe
+          if [ -z "${KAGGLE_USERNAME:-}" ] || [ -z "${KAGGLE_API_TOKEN:-}" ]; then
+            echo "Kaggle secret or username missing" | tee result/STATUS.txt
+            exit 0
+          fi
+          python -m pip install -q 'kaggle>=1.7,<2'
+          cat >/tmp/fte_h3_cpu_probe/h3_preflight.py <<'PY'
+          import json,os,shutil
+          from pathlib import Path
+          report={'probe':'FTE Dream Kick MiniMax H3 storage','gpu_requested':False,'gpu_used':False,
+                  'storage':{},'models':{},'cache_complete':False,'space_sufficient_on_cpu':False}
+          paths=['/kaggle/working','/kaggle/tmp','/kaggle/temp','/tmp','/kaggle/input']
+          for path in paths:
+            p=Path(path)
+            if p.exists():
+              u=shutil.disk_usage(p)
+              report['storage'][path]={'free_gib':round(u.free/2**30,2),
+                  'total_gib':round(u.total/2**30,2),'device_id':p.stat().st_dev,'writable':os.access(p,os.W_OK)}
+          root=Path('/kaggle/input/fte-h3-models/models')
+          items=[
+           ('text_encoders','qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors'),
+           ('vae','minimax_h3_video_vae_fp16.safetensors'),
+           ('vae','minimax_h3_audio_vae_fp32.safetensors'),
+           ('diffusion_models','Minimax-h3_Singularity_ref2va_Pruned_v1.3_int8.safetensors')
+          ]
+          for d,f in items:
+            file=root/d/f
+            report['models'][f]={'exists':file.is_file(),'bytes':file.stat().st_size if file.is_file() else 0}
+          report['cache_complete']=all(v['bytes']>1000000 for v in report['models'].values())
+          report['space_sufficient_on_cpu']=any(info['free_gib']>=65 and info['writable']
+                  for info in report['storage'].values())
+          report['readiness']='possible' if report['cache_complete'] or report['space_sufficient_on_cpu'] else 'blocked_disk_or_cache'
+          out=Path('/kaggle/working/H3_PREFLIGHT.json')
+          out.write_text(json.dumps(report,indent=2)+'\n')
+          print('=== FTE_H3_CPU_PREFLIGHT ===',json.dumps(report,indent=2),flush=True)
+          PY
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path('/tmp/fte_h3_cpu_probe')
+          slug='fte-h3-cpu-preflight-'+os.environ['GITHUB_RUN_ID']
+          kid=os.environ['KAGGLE_USERNAME']+'/'+slug
+          cfg={'id':kid,'title':slug,'code_file':'h3_preflight.py','language':'python',
+               'kernel_type':'script','is_private':True,'enable_gpu':False,
+               'enable_internet':False,'dataset_sources':[],'kernel_sources':[],
+               'competition_sources':[],'model_sources':[]}
+          (root/'kernel-metadata.json').write_text(json.dumps(cfg,indent=2))
+          Path('result/KERNEL_ID.txt').write_text(kid+'\n')
+          print('CPU_ONLY_KERNEL',kid)
+          PY
+          kaggle kernels push -p /tmp/fte_h3_cpu_probe 2>&1 | tee result/PUSH.txt
+      - name: Poll CPU-only Kaggle result and collect small report
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [ ! -s result/KERNEL_ID.txt ]; then exit 0; fi
+          KERNEL_ID=$(cat result/KERNEL_ID.txt)
+          for attempt in $(seq 1 12); do
+            kaggle kernels status "$KERNEL_ID" >result/STATUS.txt 2>&1
+            echo "CPU_STATUS_POLL_${attempt}"
+            tail -n 2 result/STATUS.txt
+            if grep -Eiq 'KernelWorkerStatus\.(COMPLETE|ERROR|CANCELLED)' result/STATUS.txt; then break; fi
+            sleep 20
+          done
+          mkdir -p result/kaggle-output
+          timeout 90s kaggle kernels output "$KERNEL_ID" --file-pattern 'H3_PREFLIGHT\.json$' -p result/kaggle-output >result/COLLECT.txt 2>&1
+          echo "OUTPUT"; tail -n 15 result/COLLECT.txt
+          find result/kaggle-output -type f -name 'H3_PREFLIGHT.json' -exec cat {} \;
+      - name: Keep capacity probe audit without model files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-H3-Kaggle-CPU-Capacity-Probe
+          path: result/
+          retention-days: 7
+          if-no-files-found: warn
