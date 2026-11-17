@@ -1,0 +1,45 @@
+name: FTE Dream Kick H3 — read-only Kaggle failure diagnosis
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/fte-dreamkick-h3-error-diagnosis.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnose-existing-failed-kernel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      KAGGLE_KERNEL_ID: gamagekasun/fte-dreamkick-h3-44155820900-56dade0e
+    steps:
+      - name: Verify existing kernel without starting GPU
+        run: |
+          mkdir -p diagnosis
+          if [ -z "${KAGGLE_USERNAME:-}" ] || [ -z "${KAGGLE_API_TOKEN:-}" ]; then
+            echo MISSING_CREDENTIALS > diagnosis/STATUS.txt
+            exit 0
+          fi
+          python -m pip install -q 'kaggle>=1.7,<2' 'six>=1.16,<2'
+          set +e
+          timeout 45s kaggle kernels status "$KAGGLE_KERNEL_ID" > diagnosis/STATUS.txt 2>&1
+          timeout 90s kaggle kernels logs "$KAGGLE_KERNEL_ID" > diagnosis/KERNEL_LOGS.txt 2>&1
+          timeout 35s kaggle kernels files "$KAGGLE_KERNEL_ID" --page-size 25 > diagnosis/OUTPUT_FILE_LIST.txt 2>&1
+          mkdir -p diagnosis/final-manifest
+          timeout 45s kaggle kernels output "$KAGGLE_KERNEL_ID" --file-pattern '*RESULT.json' -p diagnosis/final-manifest > diagnosis/MANIFEST_DOWNLOAD.txt 2>&1
+          set -e
+          echo '==Kaggle status=='; cat diagnosis/STATUS.txt
+          echo '==Kaggle output file list first 60 lines=='; head -n 60 diagnosis/OUTPUT_FILE_LIST.txt
+          echo '==Kaggle manifest download=='; head -n 30 diagnosis/MANIFEST_DOWNLOAD.txt
+          echo '==Kaggle error-tail=='; tail -c 12000 diagnosis/KERNEL_LOGS.txt
+          find diagnosis/final-manifest -type f -name '*RESULT.json' -print -exec sh -c 'head -c 12000 "$1"' sh {} \;
+      - name: Archive diagnostic text only; no model data or secret
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-H3-Existing-Kernel-Failure-Diagnosis
+          path: diagnosis/
+          retention-days: 7
+          if-no-files-found: warn
