@@ -1,0 +1,40 @@
+name: FTE H3 Retry — Read-only Kaggle terminal error diagnosis
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/fte-dreamkick-h3-retry-error-diagnosis.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      KAGGLE_KERNEL_ID: gamagekasun/fte-dreamkick-h3-real-retry-44166096051
+    steps:
+      - name: Read existing failed Kaggle kernel logs and manifest (no GPU submission)
+        shell: bash
+        run: |
+          mkdir -p diagnosis/final-manifest
+          python -m pip install -q 'kaggle>=1.7,<2' 'six>=1.16,<2'
+          set +e
+          timeout 40s kaggle kernels status "$KAGGLE_KERNEL_ID" > diagnosis/STATUS.txt 2>&1
+          timeout 100s kaggle kernels logs "$KAGGLE_KERNEL_ID" > diagnosis/KERNEL_LOGS.txt 2>&1
+          timeout 40s kaggle kernels files "$KAGGLE_KERNEL_ID" --page-size 30 > diagnosis/OUTPUT_FILE_LIST.txt 2>&1
+          timeout 50s kaggle kernels output "$KAGGLE_KERNEL_ID" --file-pattern 'RESULT\\.json$' -p diagnosis/final-manifest > diagnosis/MANIFEST_DOWNLOAD.txt 2>&1
+          set -e
+          echo '=== KAGGLE STATUS ==='; cat diagnosis/STATUS.txt
+          echo '=== OUTPUT FILE LIST ==='; head -n 60 diagnosis/OUTPUT_FILE_LIST.txt
+          echo '=== MANIFEST ==='; head -n 40 diagnosis/MANIFEST_DOWNLOAD.txt
+          echo '=== KERNEL LOG TAIL ==='; tail -c 18000 diagnosis/KERNEL_LOGS.txt
+          find diagnosis/final-manifest -name 'RESULT.json' -type f -exec cat {} \;
+      - name: Archive logs and result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-H3-44166096051-Failure-Details
+          path: diagnosis/
+          retention-days: 7
