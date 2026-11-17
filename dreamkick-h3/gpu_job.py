@@ -4,8 +4,9 @@ Input: 9:16 2D pigtail-girl + white bald boy refs. Two 5-second scenes.
 """
 import sys,os,subprocess,time,json,math,traceback,shutil
 from pathlib import Path
-ROOT=Path('/kaggle/working') if Path('/kaggle/working').is_dir() else Path.cwd()
-OUT=ROOT/'fte_dreamkick_h3'; OUT.mkdir(exist_ok=True)
+WORK=Path('/kaggle/working') if Path('/kaggle/working').is_dir() else Path.cwd()
+ROOT=Path('/kaggle/tmp') if Path('/kaggle/tmp').is_dir() else WORK
+OUT=WORK/'fte_dreamkick_h3'; OUT.mkdir(parents=True,exist_ok=True)
 REPORT=OUT/'RESULT.json'
 START=time.monotonic()
 SCENES=[
