@@ -1,7 +1,7 @@
 name: FTE V5 — Natural Front Facing Arm Swing and V4 Chase Legs
 on:
   push:
-    branches: [feature/fte-v5-front-facing-arms, main]
+    branches: [feature/fte-v5-natural-front-arms, main]
     paths:
       - 'mascot-lab/v5/**'
       - '.github/workflows/fte-v5-front-arm-motion.yml'
