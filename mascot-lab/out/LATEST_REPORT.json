@@ -1,22 +1,23 @@
 {
-  "gag": "surprise",
+  "gag": "prank",
   "best": {
-    "score": 98.56,
+    "score": 97.62,
     "expressions_used": [
+      "effort",
       "focus",
       "grin",
       "neutral",
       "shock"
     ],
     "pupils_per_head": 2,
-    "fist_contact_error_px_measured_from_sprite": null,
-    "motion_px": 98.63,
-    "contact_error_px_estimate": 0,
-    "decoded_video_frame_difference": 15.782,
-    "decoded_fist_recoil_difference": 0.0,
-    "decoded_frames": 168,
+    "fist_contact_error_px_measured_from_sprite": 2.63,
+    "motion_px": 105.61,
+    "contact_error_px_estimate": 2.63,
+    "decoded_video_frame_difference": 15.935,
+    "decoded_fist_recoil_difference": 63.337,
+    "decoded_frames": 170,
     "max_clipping_fraction": 0.0144,
-    "clipped_frames": 3,
+    "clipped_frames": 6,
     "warnings": [
       "whole-pose source still lacks independent arm/leg skeletal IK; authored fist anchor is calibrated",
       "one-pupil-per-eye overlay is validated in code; visual inspection of frames remains necessary"
@@ -25,20 +26,20 @@
     "metrics_are_heuristic_not_human_visual_review": true
   },
   "best_settings": {
-    "contact_offset": 49,
-    "right_hand_offset": 57,
+    "contact_offset": 56,
+    "right_hand_offset": 54,
     "start_x": 110,
     "slip_x": 175,
-    "knock_recoil_px": 11
+    "knock_recoil_px": 17
   },
   "candidates": [
     {
-      "score": 98.56,
+      "score": 97.44,
       "passed": true,
       "video": "candidate_0.mp4"
     },
     {
-      "score": 98.56,
+      "score": 97.62,
       "passed": true,
       "video": "candidate_1.mp4"
     }
