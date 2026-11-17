@@ -4,7 +4,7 @@ Gag: **race**. Best measured score: **98.56**; geometry/video gates: **True**.
 
 - Run travel: 63.76 px
 - Estimated door contact gap: 0 px
-- Decoded frame difference: 15.245
+- Decoded frame difference: 15.244
 - Max cropped character silhouette: 1.44%
 
 ## Remaining artistic limitations
