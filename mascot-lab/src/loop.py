@@ -79,7 +79,7 @@ def state_at(t,timeline,params):
     elif act=='shock':
         x=contact_center-11*ease(u);pose=4;y=-35*math.sin(math.pi*u);angle=-10-6*math.sin(8*math.pi*u);xs=1.08;ys=1.045
     elif act=='slip':
-        x=params.get('slip_x',contact_center-10-26*ease(u));pose=3 if u<.38 else 4
+        x=params.get('slip_x',contact_center-10)-26*ease(u);pose=3 if u<.38 else 4
         y=-32*math.sin(math.pi*u);angle=-73*ease(u);xs=1.12;ys=.92
     else:
         x=contact_center-36;pose=5;y=0;angle=-5*math.exp(-4*u)*math.sin(11*u);xs=1+.09*math.exp(-6*u);ys=1-.09*math.exp(-6*u)
