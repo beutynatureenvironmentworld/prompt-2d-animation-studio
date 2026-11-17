@@ -64,8 +64,7 @@ jobs:
           os.environ['TMPDIR']=str(root_guard/'fte_h3_temporary')
           Path(os.environ['TMPDIR']).mkdir(parents=True,exist_ok=True)
           """
-          # Keep new lines unindented to ensure valid Python.
-          preface='\n'.join(x.lstrip() for x in preface.splitlines())+'\n'
+          # YAML indentation already preserves nested Python blocks inside preface.
           s=s.replace(marker,preface,1)
           compile(s,'gpu_job.py','exec')
           out=Path('/tmp/fte_minimax_h3_job')
