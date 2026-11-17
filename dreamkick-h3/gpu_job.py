@@ -9,8 +9,8 @@ OUT=ROOT/'fte_dreamkick_h3'; OUT.mkdir(exist_ok=True)
 REPORT=OUT/'RESULT.json'
 START=time.monotonic()
 SCENES=[
-("scene01_dream","Minimal flat 2D black-and-white hand-drawn funny cartoon, 9:16. Same white cartoon girl with black outlines, two pigtails, simple dress, wide sly grin, runs toward vivid GREEN soccer ball across clean lawn, winds her leg back with elastic stretch, kicks ball very hard to right. Natural continuous limbs, no X knees or floating shoulders, strong motion, fast comedic zoom, dramatic leg extension held at last frame. Original cartoon sounds, no captions."),
-("scene02_bedroom","Same girl with pigtails and white dress is lying asleep beside a bald white cartoon boy in a BED at NIGHT. At the start her dreaming leg extends in exactly the same motion as her soccer kick. Her foot directly hits the boy and sends him flying off mattress, eyes bulge in panic, limbs flail, then he crashes to ground and looks dizzy. Girl wakes shocked and leans over bed edge. Original expressive 2D ink line art, clear match cut staging, rubber-hose shoulders, no extra pupils, strong comedic timing, no captions.")
+("scene01_dream","Minimal flat 2D black-and-white hand-drawn funny cartoon, 9:16. Same white cartoon girl with black outlines, two pigtails, simple dress, wide sly grin, runs toward vivid GREEN soccer ball across clean lawn, winds her leg back with elastic stretch, kicks ball very hard to right. Natural continuous limbs, no X knees or floating shoulders, strong motion, fast comedic zoom, dramatic leg extension held at last frame. Original cartoon sounds, no captions. Frame all critical action within the central 55% width of a 4:3 image for a 9:16 vertical crop; keep both the kicking foot and ball in that safe area."),
+("scene02_bedroom","Same girl with pigtails and white dress is lying asleep beside a bald white cartoon boy in a BED at NIGHT. At the start her dreaming leg extends in exactly the same motion as her soccer kick. Her foot directly hits the boy and sends him flying off mattress, eyes bulge in panic, limbs flail, then he crashes to ground and looks dizzy. Girl wakes shocked and leans over bed edge. Original expressive 2D ink line art, clear match cut staging, rubber-hose shoulders, no extra pupils, strong comedic timing, no captions. Frame both characters and all kick/contact action in the central 55% width of a 4:3 image for later portrait crop.")
 ]
 def write(d): REPORT.write_text(json.dumps(d,indent=2,default=str)+'\n');print('FTE_RESULT',d['status'],flush=True)
 def run(cmd,limit=180):subprocess.run(cmd,check=True,timeout=limit,stdout=subprocess.DEVNULL)
@@ -83,21 +83,21 @@ def main():
     d['status']='budget_exhausted';break
    req=H3Request(prompt=prompt,character_references=[a],
      scene_references=[a if i==0 else b],duration_seconds=5.0,
-     aspect_ratio='9:16',quality_mode='low',seed=2417+i,
+     aspect_ratio='4:3',quality_mode='quick',seed=2417+i,
      turbo_mode=True,turbo_steps=4,mute_generated_audio=False)
    result=run_generation(req,project_root=checkout,comfy_root=checkout/'ComfyUI',
-     backend='comfyui_native_fallback',allow_single_gpu_fallback=True,
+     backend='auto',allow_single_gpu_fallback=True,
      download_models=True,dry_run=False,max_attempts=1)
    paths=[Path(p) for p in result.get('outputs',[]) if Path(p).is_file()]
    item={'scene':slug,'status':result.get('status'),'verified':result.get('validation'),
          'gpu_verification':result.get('verification'),'output':None}
-   if result.get('status')=='completed' and paths:
+   if result.get('status')=='completed' and result.get('validation',{}).get('status')=='passed' and paths:
     dest=OUT/(slug+'_MiniMaxH3.mp4')
     shutil.copyfile(paths[0],dest);item['output']=str(dest)
    d['scenes'].append(item);write(d)
    if not item['output']:break
   if len(d['scenes'])==2 and all(x['output'] for x in d['scenes']):
-   # Actual 5+5-second generated clips with matched video format, H264+AAC.
+   # Actual validated H3 scene clips normalized for vertical delivery; native H3 Ref2VA supports 4:3/16:9, not 9:16.
    normalized=[]
    for i,item in enumerate(d['scenes']):
     dst=OUT/f'normalized_{i+1}.mp4'
