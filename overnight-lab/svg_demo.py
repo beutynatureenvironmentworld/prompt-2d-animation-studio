@@ -71,8 +71,8 @@ if shutil.which("ffprobe"):
 else:
     info=subprocess.run([FFMPEG,"-hide_banner","-i",str(TARGET),"-f","null","-"],
                         stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,check=True).stderr
-    size=re.search(r"Video:.*?(\\d{2,5})x(\\d{2,5})",info)
-    time_matches=re.findall(r"time=(\\d+):(\\d+):(\\d+(?:\\.\\d+)?)",info)
+    size=re.search(r"Video:.*?(\d{2,5})x(\d{2,5})",info)
+    time_matches=re.findall(r"time=(\d+):(\d+):(\d+(?:\.\d+)?)",info)
     assert size and time_matches and "Audio: aac" in info,info[-3000:]
     width,height=map(int,size.groups())
     hh,mm,ss=time_matches[-1]
