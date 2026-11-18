@@ -1,0 +1,49 @@
+name: FTE Lightweight SVG and Motion QA
+on:
+  push:
+    branches: [experiment/overnight-multi-engine-2d-20261119]
+    paths:
+      - 'overnight-lab/svg_demo.py'
+      - '.github/workflows/overnight-lightweight-svg.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  vector:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Avoid apt-get update stall; use hosted FFmpeg
+        run: |
+          command -v ffmpeg
+          ffmpeg -version | head -1
+          python -m pip install --quiet --disable-pip-version-check 'CairoSVG>=2.7,<3' 'Pillow>=10,<13'
+      - name: Render real SVG MP4
+        run: python overnight-lab/svg_demo.py
+      - name: Decode multiple frames and verify motion not frozen
+        run: |
+          python - <<'PY'
+          import json,subprocess
+          from pathlib import Path
+          p=Path('overnight-lab/out/svg/FTE_SVG_Vector_Demo.mp4')
+          qa=json.loads(Path('overnight-lab/out/svg/QA.json').read_text())
+          assert qa['verified'] and p.stat().st_size>15000
+          for t in ('0.5','2.6'):
+              subprocess.run(['ffmpeg','-y','-v','error','-ss',t,'-i',str(p),'-frames:v','1','overnight-lab/out/svg/FRAME_'+t+'.png'],check=True)
+          from PIL import Image,ImageChops
+          a=Image.open('overnight-lab/out/svg/FRAME_0.5.png').convert('RGB')
+          b=Image.open('overnight-lab/out/svg/FRAME_2.6.png').convert('RGB')
+          assert ImageChops.difference(a,b).getbbox(), 'video frames are identical'
+          print('PASS: real encoded motion between 0.5s and 2.6s')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: FTE-Lightweight-SVG-Verified-MP4
+          path: overnight-lab/out/svg/
+          retention-days: 7
+          if-no-files-found: warn
