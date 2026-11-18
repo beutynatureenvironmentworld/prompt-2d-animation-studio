@@ -17,9 +17,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Avoid apt-get update stall; use hosted FFmpeg
+      - name: Install FFmpeg from cached apt indexes (no apt-get update)
         run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            timeout 180s sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg
+          fi
           command -v ffmpeg
+          command -v ffprobe
           ffmpeg -version | head -1
           python -m pip install --quiet --disable-pip-version-check 'CairoSVG>=2.7,<3' 'Pillow>=10,<13'
       - name: Render real SVG MP4
