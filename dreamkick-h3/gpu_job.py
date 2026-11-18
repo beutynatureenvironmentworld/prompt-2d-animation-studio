@@ -17,8 +17,8 @@ OUT=WORK/'fte_dreamkick_h3'; OUT.mkdir(parents=True,exist_ok=True)
 REPORT=OUT/'RESULT.json'
 START=time.monotonic()
 SCENES=[
-("scene01_dream","Minimal flat 2D black-and-white hand-drawn funny cartoon, 9:16. Same white cartoon girl with black outlines, two pigtails, simple dress, wide sly grin, runs toward vivid GREEN soccer ball across clean lawn, winds her leg back with elastic stretch, kicks ball very hard to right. Natural continuous limbs, no X knees or floating shoulders, strong motion, fast comedic zoom, dramatic leg extension held at last frame. Original cartoon sounds, no captions. Frame all critical action within the central 40% width of a 4:3 image for a 9:16 vertical crop; keep both the kicking foot and ball in that safe area."),
-("scene02_bedroom","Same girl with pigtails and white dress is lying asleep beside a bald white cartoon boy in a BED at NIGHT. At the start her dreaming leg extends in exactly the same motion as her soccer kick. Her foot directly hits the boy and sends him flying off mattress, eyes bulge in panic, limbs flail, then he crashes to ground and looks dizzy. Girl wakes shocked and leans over bed edge. Original expressive 2D ink line art, clear match cut staging, rubber-hose shoulders, no extra pupils, strong comedic timing, no captions. Frame both characters and all kick/contact action in the central 40% width of a 4:3 image for later portrait crop.")
+("scene01_sneaky_setup","Original 2D hand-drawn slapstick cartoon, bold black outlines, white pigtail girl in pink dress at LEFT, white bald boy in blue top at RIGHT, minimalist cream background. Boy has already sprayed girl's face with milk. She glares. Boy uses his own white milk carton and mischievously flips it HORIZONTALLY: its SEALED BOTTOM is pressed to his mouth on the RIGHT, its OPEN STRAW protrudes toward the GIRL on the LEFT. Clear close-up of the reversed carton orientation; no extra hands, no captions. Stage faces and carton safely for later 9:16 vertical center crop."),
+("scene02_reverse_splash","Same original 2D cartoon girl on LEFT and bald boy on RIGHT. Boy pretends to drink from the SEALED END of his horizontal milk carton. The OPEN STRAW continues to point LEFT at girl. Girl, trying to spray boy, presses and crushes the center of his carton with her hand. Milk shoots out only of the LEFT-FACING STRAW and lands fully in GIRL'S OWN FACE! Eyes spring out; girl gets drenched again. Boy laughs hysterically. Clearly show her squeezing before the liquid shoots backward toward her own face, not toward boy. Thick black line art, minimalist backdrop, comedic timing, characters safely within the middle for a 9:16 portrait crop.")
 ]
 def write(d): REPORT.write_text(json.dumps(d,indent=2,default=str)+'\n');print('FTE_RESULT',d['status'],flush=True)
 def run(cmd,limit=180):subprocess.run(cmd,check=True,timeout=limit,stdout=subprocess.DEVNULL)
@@ -70,6 +70,39 @@ def reference_image(path,bed=False):
    inkline([(bx+s*26,by+95),(bx+s*49,by+146)],10)
    inkline([(bx+s*22,by+126),(bx+s*42,by+179)],12)
  im.save(path)
+def milk_reference_image(path, soaked=False):
+ from PIL import Image,ImageDraw
+ im=Image.new('RGB',(480,720),'#fff7e8');d=ImageDraw.Draw(im);ink='#121212'
+ d.rectangle((0,574,480,720),fill='#e4c9a4')
+ for x,girl in ((118,True),(360,False)):
+  y=355
+  d.line([(x-20,y+90),(x-27,y+190)],fill=ink,width=13)
+  d.line([(x+20,y+90),(x+27,y+190)],fill=ink,width=13)
+  d.polygon([(x-34,y+52),(x+34,y+52),(x+45,y+120),(x-45,y+120)],
+            fill='#ff6576' if girl else '#8dc9ff',outline=ink)
+  if girl:
+   for sign in (-1,1):
+    d.line([(x+sign*36,y-22),(x+sign*65,y-39)],fill=ink,width=7)
+    d.ellipse((x+sign*65-18,y-60,x+sign*65+18,y-20),fill='white',outline=ink,width=5)
+  d.ellipse((x-56,y-56,x+56,y+56),fill='white',outline=ink,width=7)
+  for dx in (-23,23):
+   d.ellipse((x+dx-9,y-18,x+dx+10,y+13),fill='white',outline=ink,width=4)
+   d.ellipse((x+dx-3,y-2,x+dx+4,y+8),fill=ink)
+  d.arc((x-25,y+17,x+25,y+44),0,180,fill=ink,width=5)
+ d.line([(153,446),(246,407)],fill=ink,width=12)
+ d.line([(332,442),(286,401)],fill=ink,width=12)
+ # carton intentionally horizontal with straw pointed LEFT and sealed bottom RIGHT
+ d.polygon([(205,386),(307,386),(307,452),(205,452)],fill='white',outline=ink)
+ d.line([(205,386),(307,386),(307,452),(205,452),(205,386)],fill=ink,width=5)
+ d.rectangle((300,391,315,446),fill='#e8edfa',outline=ink,width=3)
+ d.line([(213,399),(184,388),(170,386)],fill='#d5f4ff',width=11)
+ d.ellipse((164,380,174,390),fill=ink)
+ d.text((234,415),'MILK',fill=ink)
+ if soaked:
+  for xx,yy in ((101,337),(125,349),(148,325)):
+   d.ellipse((xx-9,yy-8,xx+9,yy+8),fill='white',outline='#9bc9de',width=2)
+ im.save(path)
+
 def prepare_model_storage(checkout):
  """Require a complete private Kaggle Input model dataset or ample local space.
 
@@ -122,21 +155,25 @@ def prepare_model_storage(checkout):
  return {'mode':'direct_download','free_gib':free_gib,'warning':'50 GiB is a guardrail, not a guaranteed requirement'}
 
 def main():
- d={'status':'initialized','model':'MiniMax-H3 Singularity Ref2VA INT8','h3_inference_verified':False,'scenes':[],'device_count':0}
+ d={'status':'initialized','story':'Clever Milk Carton Reverse Prank','model':'MiniMax-H3 Singularity Ref2VA INT8','h3_inference_verified':False,'scenes':[],'device_count':0}
  write(d)
  try:
   import torch
   if not torch.cuda.is_available():raise RuntimeError('No GPU device allocated')
   d['device_count']=torch.cuda.device_count()
   d['gpu_names']=[torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())]
-  a=OUT/'girl_soccer.png';b=OUT/'girl_boy_bedroom.png'
-  reference_image(a,False);reference_image(b,True)
+  a=OUT/'milk_setup_reference.png';b=OUT/'milk_backfire_reference.png'
+  milk_reference_image(a,False);milk_reference_image(b,True)
   checkout=ROOT/'kaggle_h3_github'
   run(['git','clone','--depth','1','https://github.com/celunah/kaggle_h3.git',str(checkout)],210)
   run([sys.executable,'-m','pip','install','-q','-r',str(checkout/'requirements-kaggle.txt')],490)
   sys.path.insert(0,str(checkout/'src'))
   from kaggle_h3.workflow import H3Request
   from kaggle_h3.pipeline import run_generation
+  from kaggle_h3.bootstrap import ensure_comfyui
+  # FIX: avoid non-ComfyUI models/ directory before ComfyUI checkout.
+  d['comfyui_bootstrap']=ensure_comfyui(checkout/'ComfyUI')
+  write(d)
   d['model_storage']=prepare_model_storage(checkout)
   write(d)
   for i,(slug,prompt) in enumerate(SCENES):
@@ -170,7 +207,7 @@ def main():
    joined=OUT/'joined.mp4'
    run(['ffmpeg','-y','-loglevel','error','-f','concat','-safe','0','-i',str(lst),
         '-c','copy',str(joined)],120)
-   final=OUT/'Funny_Toon_Ever_Dream_Kick_ACTUAL_H3.mp4'
+   final=OUT/'Funny_Toon_Ever_Clever_Milk_Prank_ACTUAL_H3.mp4'
    # Original non-licensed synthesized comedy SFX and subtle room ambience.
    # Retain the native H3 audio in raw source clips for later editorial review.
    import wave,math,numpy as np
