@@ -1,0 +1,201 @@
+name: FTE Overnight Multi-Engine 2D Software Lab
+on:
+  push:
+    branches: [experiment/overnight-multi-engine-2d-20261119]
+    paths:
+      - 'overnight-lab/**'
+      - '.github/workflows/overnight-multi-engine-lab.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  svg-vector-render:
+    name: CairoSVG + Pillow + FFmpeg genuine vector MP4
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install open-source vector animation dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg libcairo2
+          python -m pip install --quiet 'CairoSVG>=2.7,<3' 'Pillow>=10,<13'
+          ffmpeg -version | head -1
+      - name: Render real original animated SVG and sound
+        run: python overnight-lab/svg_demo.py
+      - name: Verify encoded portrait H264/AAC and motion
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('overnight-lab/out/svg/QA.json')
+          x=json.loads(p.read_text())
+          assert x['verified'] and x['has_audio'] and x['duration']>=3.8
+          print('PASS',x)
+          PY
+          ffprobe -v error -show_entries stream=codec_name,codec_type,width,height:format=duration -of json overnight-lab/out/svg/FTE_SVG_Vector_Demo.mp4
+          ffmpeg -y -hide_banner -loglevel error -ss 2 -i overnight-lab/out/svg/FTE_SVG_Vector_Demo.mp4 -frames:v 1 overnight-lab/out/svg/FRAME_REVIEW.jpg
+      - name: Upload SVG MP4 and decoded QC screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-CairoSVG-Vector-Real-MP4
+          path: overnight-lab/out/svg/
+          retention-days: 7
+          if-no-files-found: warn
+
+  manim-motion-render:
+    name: Manim Community 2D Python animation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 27
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Manim Community plus verified Cairo Pango FFmpeg dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg build-essential python3-dev libcairo2-dev libpango1.0-dev pkg-config
+          python -m pip install --quiet 'manim>=0.19,<1'
+          manim --version
+      - name: Render original pose-to-pose vector motion using Manim
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p overnight-lab/out/manim
+          manim -ql --disable_caching --media_dir overnight-lab/out/manim/media -o FTE_Manim_Original.mp4 overnight-lab/manim_demo.py MilkCartonMotion
+          file=$(find overnight-lab/out/manim/media -type f -name 'FTE_Manim_Original.mp4' | head -n 1)
+          test -s "$file"
+          ffmpeg -y -hide_banner -loglevel error -i "$file" -f lavfi -i 'sine=frequency=530:sample_rate=44100:duration=4.2' -shortest -vf 'scale=360:640,fps=15' -c:v libx264 -pix_fmt yuv420p -crf 20 -c:a aac -b:a 96k overnight-lab/out/manim/FTE_Manim_Original_With_Audio.mp4
+          ffprobe -v error -show_entries stream=codec_name,codec_type,width,height:format=duration -of json overnight-lab/out/manim/FTE_Manim_Original_With_Audio.mp4
+      - name: Upload actual Manim MP4 or installation failure log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-Manim-Real-2D-MP4
+          path: overnight-lab/out/manim/
+          retention-days: 7
+          if-no-files-found: warn
+
+  blender-orthographic-render:
+    name: Blender headless code-only orthographic 2D-style animation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender and FFmpeg from Ubuntu packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq blender ffmpeg
+          blender --version | head -n 2
+      - name: Render actual Blender PNG sequence via Python API
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p overnight-lab/out/blender_frames overnight-lab/out/blender
+          blender --background --threads 2 --python overnight-lab/blender_demo.py
+          count=$(find overnight-lab/out/blender_frames -maxdepth 1 -name 'frame_*.png' | wc -l)
+          test "$count" -ge 24
+          ffmpeg -y -hide_banner -loglevel error -framerate 12 -i overnight-lab/out/blender_frames/frame_%04d.png -f lavfi -i 'sine=frequency=360:sample_rate=44100:duration=3.5' -shortest -c:v libx264 -pix_fmt yuv420p -preset veryfast -crf 21 -c:a aac -b:a 96k overnight-lab/out/blender/FTE_Blender_Orthographic_Demo.mp4
+          ffprobe -v error -show_entries stream=codec_name,codec_type,width,height:format=duration -of json overnight-lab/out/blender/FTE_Blender_Orthographic_Demo.mp4
+          ffmpeg -y -hide_banner -loglevel error -ss 1.3 -i overnight-lab/out/blender/FTE_Blender_Orthographic_Demo.mp4 -frames:v 1 overnight-lab/out/blender/FRAME_REVIEW.jpg
+      - name: Upload actual Blender demo or mark failure honestly
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-Blender-Code-Only-2D-Style-MP4
+          path: overnight-lab/out/blender/
+          retention-days: 7
+          if-no-files-found: warn
+
+  other-2d-engines-probe:
+    name: Install/check Synfig and OpenToonz CLI availability
+    runs-on: ubuntu-24.04
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe actual distro package installation separately from rendering
+        shell: bash
+        run: |
+          set +e
+          mkdir -p overnight-lab/out/probe
+          sudo apt-get update -qq
+          for package in synfig opentoonz; do
+            echo "=== $package package metadata ===" | tee -a overnight-lab/out/probe/install-status.txt
+            apt-cache policy "$package" | head -n 12 | tee -a overnight-lab/out/probe/install-status.txt
+            if apt-cache show "$package" >/dev/null 2>&1; then
+              timeout 160s sudo apt-get install -y -qq "$package" >>overnight-lab/out/probe/install-status.txt 2>&1
+              echo "$package install exit code: $?" | tee -a overnight-lab/out/probe/install-status.txt
+            else
+              echo "$package UNAVAILABLE_IN_RUNNER_APT_REPOS" | tee -a overnight-lab/out/probe/install-status.txt
+            fi
+          done
+          command -v synfig || true
+          command -v opentoonz || true
+          echo "This is an INSTALL AVAILABILITY probe, not a successful rendering claim." | tee -a overnight-lab/out/probe/install-status.txt
+      - name: Upload explicit install outcome
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-Synfig-OpenToonz-Installation-Probe
+          path: overnight-lab/out/probe/
+          retention-days: 7
+          if-no-files-found: warn
+
+  huggingface-connection-probe:
+    name: Hugging Face PUBLIC API health, optional authenticated account only
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Hugging Face hub and detect connection without exposing secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet 'huggingface_hub>=0.24,<2'
+          mkdir -p overnight-lab/out/hf
+          python - <<'PY'
+          import os,json
+          from pathlib import Path
+          from huggingface_hub import HfApi
+          report={'public_api_works':False,'authenticated_account':False,'model_metadata_only':True,
+                  'weights_downloaded':False,'warnings':[]}
+          api=HfApi()
+          try:
+              info=api.model_info('Wan-AI/Wan2.1-T2V-1.3B-Diffusers')
+              report['public_api_works']=bool(info.id)
+              report['model_id']=info.id
+          except Exception as exc: report['warnings'].append('public model query: '+str(exc)[:280])
+          if os.environ.get('HF_TOKEN'):
+              try:
+                  who=HfApi(token=os.environ['HF_TOKEN']).whoami()
+                  report['authenticated_account']=bool(who.get('name'))
+                  report['account']=who.get('name') if report['authenticated_account'] else None
+              except Exception as exc: report['warnings'].append('authentication failed: '+str(exc)[:130])
+          else: report['warnings'].append('No HF_TOKEN secret configured: public metadata only; not connected account')
+          Path('overnight-lab/out/hf/HF_READINESS.json').write_text(json.dumps(report,indent=2)+'\n')
+          print('HF_READINESS',json.dumps(report))
+          PY
+      - name: Upload safe metadata-only result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-HuggingFace-Connection-Readiness
+          path: overnight-lab/out/hf/
+          retention-days: 7
+          if-no-files-found: warn
