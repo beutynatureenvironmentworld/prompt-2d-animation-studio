@@ -1,0 +1,101 @@
+name: Funny Toon Ever Milk Prank — One Genuine MiniMax H3 Kaggle GPU Experiment
+on:
+  push:
+    branches: [feature/kaggle-h3-milk-prank-20261118]
+    paths: ['.github/workflows/milk-prank-h3-gpu.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  submit-h3-experiment-once:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: CPU preflight for story and fixed ComfyUI bootstrap
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile dreamkick-h3/gpu_job.py
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('dreamkick-h3/gpu_job.py').read_text()
+          assert "scene01_sneaky_setup" in s and "scene02_reverse_splash" in s
+          assert "from kaggle_h3.bootstrap import ensure_comfyui" in s
+          assert s.index("d['comfyui_bootstrap']=ensure_comfyui") < s.index("d['model_storage']=prepare_model_storage")
+          assert "h3_inference_verified" in s
+          assert "Funny_Toon_Ever_Clever_Milk_Prank_ACTUAL_H3.mp4" in s
+          assert "funnytoonever" in s and "vid.best" not in s
+          print('MINIMAX_H3_PRECHECK_PASS; no GPU inference claimed')
+          PY
+      - name: Prepare Kaggle H3 worker with /tmp model storage and pip installer
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/fte_h3_milk_prank output
+          if [ -z "${KAGGLE_USERNAME:-}" ] || [ -z "${KAGGLE_API_TOKEN:-}" ]; then
+            echo "KAGGLE_SECRET_OR_USERNAME_MISSING"; exit 1
+          fi
+          python -m pip install -q 'kaggle>=1.7,<2' 'six>=1.16,<2'
+          python - <<'PY'
+          import os,json
+          from pathlib import Path
+          s=Path('dreamkick-h3/gpu_job.py').read_text()
+          anchor='ROOT=choose_model_root()'
+          prefix="""# Kaggle scratch rather than the 20 GiB working output volume.
+          os.environ['FTE_H3_ALLOW_DIRECT_DOWNLOAD']='1'
+          os.environ['HF_HOME']='/tmp/fte_h3_hf_cache'
+          os.environ['HF_HUB_CACHE']='/tmp/fte_h3_hf_cache/hub'
+          os.environ['TMPDIR']='/tmp/fte_h3_tmp'
+          Path(os.environ['TMPDIR']).mkdir(parents=True,exist_ok=True)
+          """
+          from textwrap import dedent
+          assert s.count(anchor)==1
+          s=s.replace(anchor,dedent(prefix)+anchor)
+          compile(s,'gpu_job.py','exec')
+          dest=Path('/tmp/fte_h3_milk_prank')
+          (dest/'gpu_job.py').write_text(s)
+          slug='fte-milk-prank-minimax-h3-'+os.environ['GITHUB_RUN_ID']
+          kid=os.environ['KAGGLE_USERNAME']+'/'+slug
+          cfg={'id':kid,'title':slug,'code_file':'gpu_job.py',
+               'language':'python','kernel_type':'script','is_private':True,
+               'enable_gpu':True,'machine_shape':'NvidiaTeslaT4',
+               'enable_internet':True,'dataset_sources':[],'kernel_sources':[],
+               'competition_sources':[],'model_sources':[]}
+          (dest/'kernel-metadata.json').write_text(json.dumps(cfg,indent=2))
+          Path('output/KAGGLE_KERNEL_ID.txt').write_text(kid+'\n')
+          print('FTE_TRUE_H3_GPU_KERNEL',kid)
+          PY
+      - name: Submit only one real GPU H3 job to Kaggle
+        shell: bash
+        run: |
+          set -euo pipefail
+          kaggle kernels push -p /tmp/fte_h3_milk_prank 2>&1 | tee output/SUBMISSION.txt
+      - name: Check first Kaggle status; never claim MP4 before validation
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [ -f output/KAGGLE_KERNEL_ID.txt ]; then
+            kid=$(cat output/KAGGLE_KERNEL_ID.txt)
+            for i in 1 2 3 4; do
+              kaggle kernels status "$kid" >output/KAGGLE_STATUS.txt 2>&1
+              tail -n 2 output/KAGGLE_STATUS.txt
+              grep -Eq 'KernelWorkerStatus\.(COMPLETE|ERROR|CANCELLED)' output/KAGGLE_STATUS.txt && break
+              sleep 10
+            done
+          fi
+      - name: Archive true H3 submission metadata only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-Clever-Milk-MiniMax-H3-GPU-Submission
+          path: output/
+          retention-days: 30
+          if-no-files-found: warn
