@@ -1,0 +1,35 @@
+name: FTE Hierarchical Rig and Cubic Tween Real MP4
+on:
+  push:
+    branches: [experiment/overnight-multi-engine-2d-20261119]
+    paths: ['overnight-lab/rig_tween_demo.py', '.github/workflows/overnight-rig-tween.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rig-tween:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Pillow and FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install -q 'Pillow>=10,<13'
+      - name: Render actual bone-pivot animation with cubic tween and audio
+        run: python overnight-lab/rig_tween_demo.py
+      - name: Inspect MP4 and decoded frame
+        run: |
+          ffprobe -v error -show_entries stream=codec_name,codec_type,width,height:format=duration -of json overnight-lab/out/rig/FTE_Hierarchical_Rig_Tween.mp4
+          ffmpeg -y -loglevel error -ss 2.4 -i overnight-lab/out/rig/FTE_Hierarchical_Rig_Tween.mp4 -frames:v 1 overnight-lab/out/rig/FRAME_REVIEW.jpg
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: FTE-Hierarchical-Rig-Tween-Verified-MP4
+          path: overnight-lab/out/rig/
+          retention-days: 7
+          if-no-files-found: warn
