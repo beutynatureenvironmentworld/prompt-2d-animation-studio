@@ -1,10 +1,19 @@
 """Original Funny Toon Ever: visually clear reversible milk-carton slapstick.
 Rendered inside Kaggle with Pillow/numpy/FFmpeg. Not a MiniMax H3 output.
 """
-import json, math, os, subprocess, sys, wave
+import json, math, os, subprocess, sys, wave, shutil, importlib.util
 from pathlib import Path
+# Kaggle dependency recovery: install only absent packages, preserve Kaggle CUDA stack.
+missing=[]
+if importlib.util.find_spec("PIL") is None: missing.append("pillow>=10,<13")
+if importlib.util.find_spec("numpy") is None: missing.append("numpy>=1.26,<3")
+if missing:
+    print("INSTALL_MISSING_KAGGLE_PACKAGES", missing, flush=True)
+    subprocess.run([sys.executable,"-m","pip","install","--quiet",*missing],check=True,timeout=300)
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
+if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
+    raise RuntimeError("ffmpeg and ffprobe required; use Kaggle stock image or install system ffmpeg first")
 
 ROOT=Path("/kaggle/working") if Path("/kaggle/working").exists() else Path.cwd()
 OUT=ROOT/"FTE_Milk_Prank"; OUT.mkdir(parents=True,exist_ok=True)
