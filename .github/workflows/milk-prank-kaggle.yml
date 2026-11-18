@@ -1,0 +1,117 @@
+name: Funny Toon Ever — Kaggle Clear Milk Prank MP4
+on:
+  push:
+    branches: [feature/kaggle-milk-prank-clear-20261118]
+    paths:
+      - '.github/workflows/milk-prank-kaggle.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  submit-run-collect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    env:
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check source and install missing Kaggle API client
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile milk-prank-kaggle/render.py
+          python -m pip install --quiet 'kaggle>=1.7,<2' 'six>=1.16,<2'
+          mkdir -p /tmp/fte-milk-prank-kaggle result
+          if [ -z "${KAGGLE_USERNAME:-}" ] || [ -z "${KAGGLE_API_TOKEN:-}" ]; then
+            echo "Kaggle account variable or repository secret missing" | tee result/MISSING_KAGGLE_CREDENTIALS.txt
+            exit 1
+          fi
+          cp milk-prank-kaggle/render.py /tmp/fte-milk-prank-kaggle/render.py
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          slug="fte-clear-milk-prank-"+os.environ["GITHUB_RUN_ID"]
+          kid=os.environ["KAGGLE_USERNAME"]+"/"+slug
+          cfg={"id":kid,"title":slug,"code_file":"render.py","language":"python",
+               "kernel_type":"script","is_private":True,"enable_gpu":False,
+               "enable_internet":True,"dataset_sources":[],"kernel_sources":[],
+               "competition_sources":[],"model_sources":[]}
+          Path("/tmp/fte-milk-prank-kaggle/kernel-metadata.json").write_text(json.dumps(cfg,indent=2)+"\n")
+          Path("result/KERNEL_ID.txt").write_text(kid+"\n")
+          print("FTE_KAGGLE_ID",kid,flush=True)
+          PY
+      - name: Submit one actual Kaggle animation render (no GPU quota)
+        shell: bash
+        run: |
+          set -euo pipefail
+          kaggle kernels push -p /tmp/fte-milk-prank-kaggle 2>&1 | tee result/SUBMISSION.txt
+      - name: Poll Kaggle and collect the authentic video (not a fake H3 claim)
+        shell: bash
+        run: |
+          set -euo pipefail
+          kid=$(cat result/KERNEL_ID.txt)
+          finish=0
+          for i in $(seq 1 22); do
+            kaggle kernels status "$kid" >result/STATUS.txt 2>&1 || true
+            printf 'KAGGLE_POLL_%02d ' "$i"
+            tail -n 1 result/STATUS.txt
+            if grep -q 'KernelWorkerStatus.COMPLETE' result/STATUS.txt; then finish=1; break; fi
+            if grep -Eq 'KernelWorkerStatus.(ERROR|CANCELLED)' result/STATUS.txt; then break; fi
+            sleep 20
+          done
+          mkdir -p result/downloaded
+          kaggle kernels output "$kid" -p result/downloaded --file-pattern 'RESULT\.json$|Funny_Toon_Ever_Clever_Milk_Prank_KAGGLE\.mp4$' >result/COLLECT_LOG.txt 2>&1 || true
+          echo 'COLLECT_RESULTS'; tail -n 20 result/COLLECT_LOG.txt
+          if [ "$finish" -ne 1 ]; then
+            echo 'KAGGLE_RENDER_NOT_YET_COMPLETE_OR_ERROR' | tee result/QA_STATUS.txt
+            exit 1
+          fi
+      - name: FFprobe verify real MP4+sound+source manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,subprocess
+          from pathlib import Path
+          root=Path("result/downloaded")
+          movie=next(root.rglob("Funny_Toon_Ever_Clever_Milk_Prank_KAGGLE.mp4"),None)
+          manifest=next(root.rglob("RESULT.json"),None)
+          if not movie or not manifest:
+              raise SystemExit("KAGGLE MP4/RESULT.json missing: check COLLECT_LOG.txt")
+          m=json.loads(manifest.read_text())
+          info=json.loads(subprocess.check_output(["ffprobe","-v","error","-show_streams","-show_format","-of","json",str(movie)],text=True))
+          v=next(s for s in info["streams"] if s["codec_type"]=="video")
+          a=any(s["codec_type"]=="audio" for s in info["streams"])
+          duration=float(info["format"]["duration"])
+          verified=(m.get("status")=="completed" and m.get("video_valid")==True
+                and m.get("model")=="not MiniMax H3"
+                and v["width"]*16==v["height"]*9 and a and duration>=11)
+          report={"verified":verified,"video":str(movie),"width":v["width"],
+                  "height":v["height"],"duration":duration,"audio":a,
+                  "method":"Kaggle original vector animation; NOT MiniMax H3"}
+          Path("result/COLLECTION_QA.json").write_text(json.dumps(report,indent=2)+"\n")
+          print("KAGGLE_MILK_PRANK_FFPROBE_QA",report)
+          if not verified: raise SystemExit("Kaggle MP4 quality validation failed")
+          PY
+      - name: Upload authentic Kaggle MP4, source manifest and QA
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Funny-Toon-Ever-Clever-Milk-Prank-KAGGLE-MP4
+          path: |
+            result/downloaded/
+            result/COLLECTION_QA.json
+          retention-days: 30
+          if-no-files-found: error
+      - name: Upload diagnostic status if unsuccessful
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Funny-Toon-Ever-Milk-Prank-Kaggle-Diagnostics
+          path: result/
+          retention-days: 7
+          if-no-files-found: warn
