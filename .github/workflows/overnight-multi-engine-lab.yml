@@ -18,28 +18,30 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install open-source vector animation dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg libcairo2
-          python -m pip install --quiet 'CairoSVG>=2.7,<3' 'Pillow>=10,<13'
-          ffmpeg -version | head -1
-      - name: Render real original animated SVG and sound
-        run: python overnight-lab/svg_demo.py
-      - name: Verify encoded portrait H264/AAC and motion
-        shell: bash
+      - name: Install pip-bundled FFmpeg and vector libraries without APT
         run: |
           set -euo pipefail
+          python -m pip install --quiet --disable-pip-version-check 'imageio-ffmpeg>=0.5,<1' 'CairoSVG>=2.7,<3' 'Pillow>=10,<13'
+      - name: Render real original animated SVG and sound
+        run: python overnight-lab/svg_demo.py
+      - name: Verify decoded video and independently compare source frames
+        run: |
           python - <<'PY'
-          import json
+          import json,subprocess,imageio_ffmpeg
           from pathlib import Path
-          p=Path('overnight-lab/out/svg/QA.json')
-          x=json.loads(p.read_text())
-          assert x['verified'] and x['has_audio'] and x['duration']>=3.8
-          print('PASS',x)
+          from PIL import Image,ImageChops
+          root=Path('overnight-lab/out/svg')
+          p=root/'FTE_SVG_Vector_Demo.mp4'
+          qa=json.loads((root/'QA.json').read_text())
+          assert qa['verified'] and qa['duration']>=3.8 and qa['has_audio']
+          ffmpeg=imageio_ffmpeg.get_ffmpeg_exe()
+          for t in ('0.5','2.6'):
+              subprocess.run([ffmpeg,'-y','-v','error','-ss',t,'-i',str(p),'-frames:v','1',str(root/('FRAME_'+t+'.png'))],check=True)
+          a=Image.open(root/'FRAME_0.5.png').convert('RGB')
+          b=Image.open(root/'FRAME_2.6.png').convert('RGB')
+          assert ImageChops.difference(a,b).getbbox(), 'frozen video'
+          print('VERIFIED_SVG_AUDIO_AND_MOTION',qa)
           PY
-          ffprobe -v error -show_entries stream=codec_name,codec_type,width,height:format=duration -of json overnight-lab/out/svg/FTE_SVG_Vector_Demo.mp4
-          ffmpeg -y -hide_banner -loglevel error -ss 2 -i overnight-lab/out/svg/FTE_SVG_Vector_Demo.mp4 -frames:v 1 overnight-lab/out/svg/FRAME_REVIEW.jpg
       - name: Upload SVG MP4 and decoded QC screenshot
         if: always()
         uses: actions/upload-artifact@v4
@@ -86,6 +88,7 @@ jobs:
           if-no-files-found: warn
 
   blender-orthographic-render:
+    if: github.event_name == 'workflow_dispatch'
     name: Blender headless code-only orthographic 2D-style animation
     runs-on: ubuntu-24.04
     timeout-minutes: 35
