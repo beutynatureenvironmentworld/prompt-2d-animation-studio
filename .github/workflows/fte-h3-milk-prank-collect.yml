@@ -1,0 +1,78 @@
+name: Funny Toon Ever — Collect and verify REAL Kaggle MiniMax H3 Milk Prank
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/fte-h3-milk-prank-collect.yml']
+  schedule:
+    - cron: '39 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check-existing-h3-milk-prank:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    env:
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      KAGGLE_KERNEL_ID: gamagekasun/fte-milk-prank-minimax-h3-44374019084
+    steps:
+      - name: Read status of existing private H3 job (never submit another GPU job)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          python -m pip install --quiet 'kaggle>=1.7,<2'
+          if [ -z "${KAGGLE_USERNAME:-}" ] || [ -z "${KAGGLE_API_TOKEN:-}" ]; then
+            echo "KAGGLE_CREDS_MISSING" > output/KAGGLE_STATUS.txt
+            exit 0
+          fi
+          kaggle kernels status "$KAGGLE_KERNEL_ID" >output/KAGGLE_STATUS.txt 2>&1 || true
+          cat output/KAGGLE_STATUS.txt
+          if grep -Eiq 'KernelWorkerStatus\.(COMPLETE|ERROR|CANCELLED)' output/KAGGLE_STATUS.txt; then
+            timeout 90s kaggle kernels output "$KAGGLE_KERNEL_ID" --file-pattern 'RESULT\.json$|Funny_Toon_Ever_Clever_Milk_Prank_ACTUAL_H3\.mp4$' -p output >output/DOWNLOAD_LOG.txt 2>&1 || true
+            echo "KAGGLE_OUTPUT_FILES"
+            find output -type f -printf '%p %s bytes\n'
+            tail -n 20 output/DOWNLOAD_LOG.txt
+          fi
+      - name: Check actual H3 manifest and MP4 if present
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,subprocess,shutil
+          from pathlib import Path
+          root=Path('output')
+          report=next(root.rglob('RESULT.json'),None)
+          video=next(root.rglob('Funny_Toon_Ever_Clever_Milk_Prank_ACTUAL_H3.mp4'),None)
+          reason='Kaggle still running or H3 output missing'
+          validated=False
+          model=None
+          if report:
+              m=json.loads(report.read_text())
+              model=m.get('model')
+              reason=m.get('error') or m.get('status') or reason
+              if m.get('status')=='completed' and m.get('h3_inference_verified') is True and video:
+                  if not shutil.which('ffprobe'):
+                      # Do not fake validation. The Kaggle source worker already runs ffprobe.
+                      reason='MP4 is present, independent GitHub runner ffprobe unavailable'
+                  else:
+                      p=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(video)],text=True))
+                      v=next(s for s in p['streams'] if s['codec_type']=='video')
+                      audio=any(s['codec_type']=='audio' for s in p['streams'])
+                      seconds=float(p['format']['duration'])
+                      validated=(v['width']*16==v['height']*9 and audio and seconds>=8)
+                      reason='real MiniMax H3 MP4 with audio validated' if validated else 'MP4 format/audio/duration invalid'
+          qa={'validated_h3':validated,'reason':reason,'model':model,
+              'video_present':bool(video),'manifest_present':bool(report)}
+          (root/'COLLECTION_QA.json').write_text(json.dumps(qa,indent=2)+'\n')
+          print('H3_MILK_PRANK_QA',json.dumps(qa))
+          PY
+      - name: Archive status and genuine H3 outputs if present
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-Clever-Milk-Prank-Kaggle-H3-Status-and-Real-Output
+          path: output/
+          retention-days: 30
+          if-no-files-found: warn
