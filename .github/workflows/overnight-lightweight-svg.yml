@@ -17,28 +17,29 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install FFmpeg from cached apt indexes (no apt-get update)
+      - name: Install pip-bundled FFmpeg without Ubuntu APT
         run: |
           set -euo pipefail
-          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
-            timeout 180s sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg
-          fi
-          command -v ffmpeg
-          command -v ffprobe
-          ffmpeg -version | head -1
-          python -m pip install --quiet --disable-pip-version-check 'CairoSVG>=2.7,<3' 'Pillow>=10,<13'
+          python -m pip install --quiet --disable-pip-version-check 'imageio-ffmpeg>=0.5,<1' 'CairoSVG>=2.7,<3' 'Pillow>=10,<13'
+          python - <<'PY'
+          import imageio_ffmpeg,subprocess
+          ffmpeg=imageio_ffmpeg.get_ffmpeg_exe()
+          print('Bundled FFmpeg:',ffmpeg)
+          subprocess.run([ffmpeg,'-version'],check=True,stdout=subprocess.DEVNULL)
+          PY
       - name: Render real SVG MP4
         run: python overnight-lab/svg_demo.py
       - name: Decode multiple frames and verify motion not frozen
         run: |
           python - <<'PY'
-          import json,subprocess
+          import json,subprocess,imageio_ffmpeg
           from pathlib import Path
           p=Path('overnight-lab/out/svg/FTE_SVG_Vector_Demo.mp4')
           qa=json.loads(Path('overnight-lab/out/svg/QA.json').read_text())
           assert qa['verified'] and p.stat().st_size>15000
+          ffmpeg=imageio_ffmpeg.get_ffmpeg_exe()
           for t in ('0.5','2.6'):
-              subprocess.run(['ffmpeg','-y','-v','error','-ss',t,'-i',str(p),'-frames:v','1','overnight-lab/out/svg/FRAME_'+t+'.png'],check=True)
+              subprocess.run([ffmpeg,'-y','-v','error','-ss',t,'-i',str(p),'-frames:v','1','overnight-lab/out/svg/FRAME_'+t+'.png'],check=True)
           from PIL import Image,ImageChops
           a=Image.open('overnight-lab/out/svg/FRAME_0.5.png').convert('RGB')
           b=Image.open('overnight-lab/out/svg/FRAME_2.6.png').convert('RGB')
