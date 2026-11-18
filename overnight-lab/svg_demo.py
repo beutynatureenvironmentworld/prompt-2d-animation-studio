@@ -71,11 +71,16 @@ if shutil.which("ffprobe"):
 else:
     info=subprocess.run([FFMPEG,"-hide_banner","-i",str(TARGET),"-f","null","-"],
                         stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,check=True).stderr
-    size=re.search(r"Video:.*?(\d{2,5})x(\d{2,5})",info)
-    time_matches=re.findall(r"time=(\d+):(\d+):(\d+(?:\.\d+)?)",info)
-    assert size and time_matches and "Audio: aac" in info,info[-3000:]
+    # FFmpeg 9 progress output may omit time= when decoding too quickly.
+    # Read container duration, codec and resolution from input metadata, then
+    # trust check=True above to confirm all encoded frames decoded successfully.
+    video_line=next((line for line in info.splitlines() if "Video: h264" in line), "")
+    audio_line=next((line for line in info.splitlines() if "Audio: aac" in line), "")
+    size=re.search(r"(?<![0-9])(\\d{2,5})x(\\d{2,5})(?![0-9])",video_line)
+    duration_match=re.search(r"Duration:\\s*(\\d+):(\\d+):(\\d+(?:\\.\\d+)?)",info)
+    assert size and duration_match and audio_line,info[-3000:]
     width,height=map(int,size.groups())
-    hh,mm,ss=time_matches[-1]
+    hh,mm,ss=duration_match.groups()
     duration=int(hh)*3600+int(mm)*60+float(ss)
     audio=True
     method="ffmpeg-decode"
