@@ -1,5 +1,5 @@
 """CPU-only original SVG animation renderer with audio and phone-portrait QA."""
-import io, json, math, subprocess
+import io, json, math, subprocess, shutil, re
 from pathlib import Path
 import cairosvg
 from PIL import Image
@@ -9,7 +9,9 @@ ROOT.mkdir(parents=True,exist_ok=True)
 TARGET=ROOT/"FTE_SVG_Vector_Demo.mp4"
 W,H,FPS,N=360,640,15,60
 
-cmd=["ffmpeg","-y","-loglevel","error","-f","rawvideo","-pixel_format","rgba",
+import imageio_ffmpeg
+FFMPEG = shutil.which("ffmpeg") or imageio_ffmpeg.get_ffmpeg_exe()
+cmd=[FFMPEG,"-y","-loglevel","error","-f","rawvideo","-pixel_format","rgba",
      "-video_size",f"{W}x{H}","-framerate",str(FPS),"-i","pipe:0",
      "-f","lavfi","-i","sine=frequency=430:sample_rate=44100:duration=4",
      "-shortest","-c:v","libx264","-pix_fmt","yuv420p","-preset","veryfast",
@@ -56,13 +58,30 @@ for i in range(N):
     process.stdin.write(frame.tobytes())
 process.stdin.close()
 if process.wait(timeout=100):raise SystemExit("FFmpeg failure")
-probe=json.loads(subprocess.check_output(["ffprobe","-v","error","-show_streams","-show_format","-of","json",str(TARGET)],text=True))
-streams=probe["streams"]
-v=next(s for s in streams if s["codec_type"]=="video")
-audio=any(s["codec_type"]=="audio" for s in streams)
+# GitHub runner may have stale Ubuntu APT indexes; use bundled imageio FFmpeg.
+# Probe with FFprobe if available, otherwise inspect FFmpeg's actual decoded stream metadata.
+if shutil.which("ffprobe"):
+    probe=json.loads(subprocess.check_output(["ffprobe","-v","error","-show_streams","-show_format","-of","json",str(TARGET)],text=True))
+    streams=probe["streams"]
+    v=next(s for s in streams if s["codec_type"]=="video")
+    audio=any(s["codec_type"]=="audio" for s in streams)
+    width,height=v["width"],v["height"]
+    duration=float(probe["format"]["duration"])
+    method="ffprobe"
+else:
+    info=subprocess.run([FFMPEG,"-hide_banner","-i",str(TARGET),"-f","null","-"],
+                        stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,check=True).stderr
+    size=re.search(r"Video:.*?(\\d{2,5})x(\\d{2,5})",info)
+    time_matches=re.findall(r"time=(\\d+):(\\d+):(\\d+(?:\\.\\d+)?)",info)
+    assert size and time_matches and "Audio: aac" in info,info[-3000:]
+    width,height=map(int,size.groups())
+    hh,mm,ss=time_matches[-1]
+    duration=int(hh)*3600+int(mm)*60+float(ss)
+    audio=True
+    method="ffmpeg-decode"
 qa={"engine":"CairoSVG+Pillow+FFmpeg","video":str(TARGET),
-    "width":v["width"],"height":v["height"],"duration":float(probe["format"]["duration"]),
-    "has_audio":audio,"fps":FPS,"cpu_only":True}
+    "width":width,"height":height,"duration":duration,
+    "has_audio":audio,"fps":FPS,"cpu_only":True,"probe_method":method}
 qa["verified"]=qa["width"]==360 and qa["height"]==640 and qa["duration"]>=3.8 and audio
 (ROOT/"QA.json").write_text(json.dumps(qa,indent=2)+"\n")
 print(json.dumps(qa))
