@@ -1,0 +1,188 @@
+name: FTE Milk Prank — Pro IK Rig, Stereo Foley and REAL Kokoro Neural Dialogue
+on:
+  push:
+    branches: [feature/fte-milk-prank-ik-sound-studio-v2-20261119]
+    paths:
+      - .github/workflows/fte-milk-prank-ik-pro-render.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-ik-animation:
+    name: Render original Snore-style IK animation + original pro Foley
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pure-code animation and audio rendering software
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg librsvg2-2 libcairo2
+          python -m pip install --quiet 'numpy>=1.26,<3' 'Pillow>=10,<13'
+          cp midnight-jar/render.py midnight-jar/scene.cjs milk-prank-original/
+          node --check milk-prank-original/art.cjs
+          node --check milk-prank-original/rig_ik.cjs
+          python -m py_compile milk-prank-original/audio_pro.py milk-prank-original/qa_video.py
+      - name: Rig QA — test grounded feet, wrist grip and SVG source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node milk-prank-original/test_ik.cjs
+      - name: Render actual 720×1280 24fps source frames using original SVG engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p milk-prank-original/out
+          cd milk-prank-original
+          python render.py story.json out/FTE_Original_720p_Silent.mp4 --width 720 --fps 24
+          ffprobe -v error -show_entries format=duration:stream=codec_type,width,height -of json out/FTE_Original_720p_Silent.mp4
+      - name: Generate 48 kHz original stereo Foley / musical soundtrack
+        shell: bash
+        run: |
+          set -euo pipefail
+          python milk-prank-original/audio_pro.py milk-prank-original/out
+          ffprobe -v error -show_entries format=duration:stream=codec_name,channels,sample_rate -of json milk-prank-original/out/FTE_PRO_STEREO_FOLEY_48K.wav
+      - name: High-quality 1080×1920 film encode with synced SFX
+        shell: bash
+        run: |
+          set -euo pipefail
+          ffmpeg -y -hide_banner -loglevel error \
+            -i milk-prank-original/out/FTE_Original_720p_Silent.mp4 \
+            -i milk-prank-original/out/FTE_PRO_STEREO_FOLEY_48K.wav \
+            -map 0:v:0 -map 1:a:0 \
+            -vf 'scale=1080:1920:flags=lanczos,format=yuv420p' \
+            -r 24 -c:v libx264 -preset medium -crf 16 \
+            -c:a aac -b:a 224k -ar 48000 \
+            -movflags +faststart -shortest \
+            milk-prank-original/out/FTE_Milk_Prank_Pro_IK_Foley_1080p.mp4
+          python milk-prank-original/qa_video.py \
+            milk-prank-original/out/FTE_Milk_Prank_Pro_IK_Foley_1080p.mp4 \
+            milk-prank-original/out
+      - name: Save actual verified high-quality MP4, lossless Foley and QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-Milk-Prank-IK-Real-MP4-48K-Foley
+          path: |
+            milk-prank-original/out/FTE_Milk_Prank_Pro_IK_Foley_1080p.mp4
+            milk-prank-original/out/FTE_PRO_STEREO_FOLEY_48K.wav
+            milk-prank-original/out/VIDEO_QA.json
+            milk-prank-original/out/AUDIO_FOLEY_QA.json
+            milk-prank-original/out/FRAME_AUDIT.jpg
+          if-no-files-found: warn
+          retention-days: 30
+
+  huggingface-real-voices:
+    name: Actually run Apache-licensed Kokoro 82M girl and boy voices
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install real Hugging Face TTS model dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq espeak-ng libsndfile1 ffmpeg
+          python -m pip install --quiet 'kokoro>=0.9,<1' 'soundfile>=0.12,<1' 'numpy>=1.26,<3'
+          python -c "import kokoro,soundfile; print('KOKORO_MODEL_RUNTIME_READY')"
+      - name: Generate actual boy/girl spoken lines; refuse fake AI speech
+        shell: bash
+        run: |
+          set -euo pipefail
+          python milk-prank-original/kokoro_voice.py milk-prank-original/out/voice
+          ffprobe -v error -show_entries format=duration:stream=codec_type,sample_rate -of json \
+            milk-prank-original/out/voice/girl_reaction.wav
+          ffprobe -v error -show_entries format=duration:stream=codec_type,sample_rate -of json \
+            milk-prank-original/out/voice/boy_laugh.wav
+      - name: Save verified model-inference speech and metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-Kokoro-82M-Real-Character-Voices
+          path: milk-prank-original/out/voice/
+          if-no-files-found: warn
+          retention-days: 30
+
+  final-voice-sync:
+    name: Compose final 1080p cartoon with two REAL neural voices + original Foley
+    runs-on: ubuntu-24.04
+    needs: [original-ik-animation,huggingface-real-voices]
+    timeout-minutes: 12
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: FTE-Milk-Prank-IK-Real-MP4-48K-Foley
+          path: build/animation
+      - uses: actions/download-artifact@v4
+        with:
+          name: FTE-Kokoro-82M-Real-Character-Voices
+          path: build/voice
+      - name: Verify real Kokoro inference and ffmpeg before final mix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path("build/voice/VOICE_QA.json").read_text())
+          assert d['real_hugging_face_model_inference'] is True
+          assert len(d['dialogue'])==2
+          assert Path('build/voice/girl_reaction.wav').stat().st_size>12000
+          assert Path('build/voice/boy_laugh.wav').stat().st_size>12000
+          assert json.loads(Path('build/animation/VIDEO_QA.json').read_text())['verified_encoded']
+          print('REAL_NEURAL_VOICE_AND_VECTOR_VIDEO_INPUTS_PASS')
+          PY
+      - name: Mix original multi-event stereo Foley and voices at fixed scene timestamps
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          ffmpeg -y -hide_banner -loglevel error \
+            -i build/animation/FTE_Milk_Prank_Pro_IK_Foley_1080p.mp4 \
+            -i build/voice/girl_reaction.wav \
+            -i build/voice/boy_laugh.wav \
+            -filter_complex '[0:a]volume=0.80[a0];[1:a]adelay=10720:all=1,volume=1.10[a1];[2:a]adelay=12420:all=1,volume=1.12[a2];[a0][a1][a2]amix=inputs=3:duration=first:dropout_transition=0:normalize=0,alimiter=limit=0.95,aresample=48000[aout]' \
+            -map 0:v:0 -map '[aout]' \
+            -c:v copy -c:a aac -b:a 224k -ar 48000 \
+            -movflags +faststart -shortest \
+            output/Funny_Toon_Ever_Milk_Prank_Pro_IK_Kokoro_1080p.mp4
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess,json
+          f=Path('output/Funny_Toon_Ever_Milk_Prank_Pro_IK_Kokoro_1080p.mp4')
+          d=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_format','-show_streams','-of','json',str(f)],text=True))
+          v=next(x for x in d['streams'] if x['codec_type']=='video')
+          a=next(x for x in d['streams'] if x['codec_type']=='audio')
+          secs=float(d['format']['duration'])
+          qa={'verified':v['width']==1080 and v['height']==1920 and
+                        14.8<=secs<=15.3 and a['codec_name']=='aac',
+              'model_inference':'Kokoro-82M genuine pretrained model',
+              'sound_design':'48 kHz original procedural stereo Foley',
+              'visual_engine':'Original Snore Collector Node SVG + IK',
+              'width':v['width'],'height':v['height'],'duration':secs,
+              'video_codec':v['codec_name'],'audio_codec':a['codec_name'],
+              'file_bytes':f.stat().st_size,'no_neural_video_claimed':True}
+          Path('output/FINAL_QA.json').write_text(json.dumps(qa,indent=2)+'\n')
+          print('FINAL_GENUINE_IK_AI_VOICE_MP4_QA',qa,flush=True)
+          assert qa['verified']
+          PY
+      - name: Save final verified MP4
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-FINAL-Milk-Prank-Original-IK-Kokoro-Real-MP4
+          path: output/
+          retention-days: 30
+          if-no-files-found: warn
