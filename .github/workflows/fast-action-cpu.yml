@@ -1,0 +1,59 @@
+name: Fast Action CPU — Original 2D Slapstick MP4
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'fast-action-cpu/**'
+      - '.github/workflows/fast-action-cpu.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  render-cpu-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install lightweight CPU animation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r fast-action-cpu/requirements.txt
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq ffmpeg
+          fi
+          ffmpeg -version | head -1
+      - name: Render original 720x720 / 24fps / 12-second silent cartoon
+        run: |
+          mkdir -p fast-action-cpu/out
+          python fast-action-cpu/render_fast_action.py \
+            --output fast-action-cpu/out/Fast_Action_Donut_Chase_CPU.mp4 \
+            --contact-sheet fast-action-cpu/out/CONTACT_SHEET.jpg
+      - name: Verify actual decoded video properties
+        run: |
+          ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate:format=duration -of json fast-action-cpu/out/Fast_Action_Donut_Chase_CPU.mp4
+          python - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          video=Path('fast-action-cpu/out/Fast_Action_Donut_Chase_CPU.mp4')
+          assert video.stat().st_size > 100000
+          d=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries','stream=codec_name,width,height,r_frame_rate:format=duration','-of','json',str(video)]))
+          st=d['streams'][0]
+          assert (st['width'],st['height'],st['codec_name'],st['r_frame_rate']) == (720,720,'h264','24/1'),st
+          assert abs(float(d['format']['duration'])-12.0)<.1,d
+          assert Path('fast-action-cpu/out/CONTACT_SHEET.jpg').stat().st_size>30000
+          print('FAST_ACTION_CPU_VIDEO_VERIFIED',d)
+          PY
+      - name: Download completed video and contact sheet from this run
+        uses: actions/upload-artifact@v4
+        with:
+          name: fast-action-cpu-donut-chase
+          path: fast-action-cpu/out/
+          retention-days: 14
+          if-no-files-found: error
