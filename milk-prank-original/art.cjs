@@ -1,3 +1,4 @@
+const rig=require('./rig_ik.cjs');
 const clamp=x=>Math.max(0,Math.min(1,x)), ease=x=>clamp(x)**2*(3-2*clamp(x));
 const mix=(a,b,t)=>a+(b-a)*t;
 const ink='#211b36', ivory='#f7e6cf', lilac='#aea4ce';
@@ -83,36 +84,16 @@ function at(story,t,flat=false){
   }
 
   function girl(){
-    const x=87+wobble*1.2,y=352+.6*Math.sin(t*3)+shock*1.0*Math.sin(t*35);
+    const q=rig.girlPose(t,{reach,shock});
     const wet=Math.max(first,backfire);
     const mood=shock>.2?'shock':(first>.22&&t<9.15?'angry':'sly');
-    let s=P('M-12 38Q0 45 12 38L16 122Q0 134 -17 119Z','#8782aa',ink,3);
-    s+=P('M-6 119Q-21 161 -38 200 M6 119Q16 161 34 200','none',ink,4.7);
-    s+=P('M-38 200L-48 204 M34 200L44 204','none',ink,4.5);
-    // The non-grabbing arm has continuous shoulder, elbow, wrist and hand anchors.
-    s+=P('M-14 52Q-31 71 -35 102','none',ink,5);
-    s+=E(-34,103,5,5,ivory);
-    const p=reach,px=mix(19,112,p),py=mix(106,46,p);
-    const ex=mix(44,58,p),ey=mix(76,49,p);
-    s+=P('M14 50Q'+ex+' '+ey+' '+px+' '+py,'none',ink,5);
-    s+=E(px,py,5.2,4.8,ivory);
-    s+=G('rotate('+(-1+shock*5*Math.sin(t*32))+')',girlHead(mood,wet));
-    return G('translate('+x+' '+y+')',s);
+    return q.svg+G('translate('+q.x+' '+q.y+') rotate('+(-1+shock*3*Math.sin(t*32))+')',
+      girlHead(mood,wet));
   }
   function boy(){
-    const x=266,y=356+2*mathSin(t*2)+laugh*2.9*Math.sin(t*19);
-    let s=P('M-10 38Q0 42 12 38L17 125L-15 126Z','#777292',ink,3);
-    s+=P('M-6 125Q-21 163 -31 205 M8 124Q19 165 34 205','none',ink,4.7);
-    s+=P('M-31 205L-43 209 M34 205L46 209','none',ink,4.5);
-    const armSwing=laugh*.5*Math.sin(t*19);
-    s+=P('M-12 50Q-38 62 -41 75','none',ink,5);
-    s+=P('M-41 75Q-51 65 -50 54','none',ink,4.5);
-    s+=E(-51,54,5,5,ivory);
-    // Holding the sealed right-hand end at the mouth, never the exposed straw.
-    s+=P('M11 49Q30 58 31 '+(48-9*armSwing),'none',ink,4.7);
-    s+=E(31,47-9*armSwing,5.2,5.2,ivory);
-    s+=G('rotate('+(laugh*4*Math.sin(t*18))+')',boyHead(laugh>.14?'laugh':'sly'));
-    return G('translate('+x+' '+y+')',s);
+    const q=rig.boyPose(t,{laugh});
+    return q.svg+G('translate('+q.x+' '+q.y+') rotate('+(laugh*4*Math.sin(t*18))+')',
+      boyHead(laugh>.14?'laugh':'sly'));
   }
   function mathSin(x){return Math.sin(x)}
 
@@ -137,9 +118,9 @@ function at(story,t,flat=false){
     if(intensity<.02)return '';
     // Both sprays leave the LEFT-facing hole and go LEFT to the girl's face.
     const opacity=Math.min(1,intensity*3);
-    const tip=fromFirst?mix(130,90,intensity):mix(154,88,intensity);
-    const ty=fromFirst?mix(391,348,intensity):mix(383,347,intensity);
-    const x0=fromFirst?155:149, y0=fromFirst?402:391;
+    const tip=fromFirst?mix(129,90,intensity):mix(128,88,intensity);
+    const ty=fromFirst?mix(389,348,intensity):mix(387,347,intensity);
+    const x0=141, y0=390;
     let s='<g opacity="'+opacity+'">';
     s+=P('M'+x0+' '+y0+'Q118 '+(350-15*Math.sin(t*19))+' '+tip+' '+ty,'none','#b6d7e9',12);
     s+=P('M'+x0+' '+y0+'Q118 '+(350-15*Math.sin(t*19))+' '+tip+' '+ty,'none','#f8fbff',8);
@@ -167,6 +148,12 @@ function at(story,t,flat=false){
   }
   // Keep visual layers faithful to original multilayer midnight-jar renderer.
   let actors=girl()+boy()+carton();
+  // The hand/finger contour must appear in front of the crushed box, not behind it.
+  if(reach>.80){
+    const p=rig.girlPose(t,{reach,shock});
+    actors+=E(p.wrist[0]-2,p.wrist[1]-3,3.3,3.4,ivory);
+    actors+=P('M'+(p.wrist[0]-7)+' '+(p.wrist[1]-6)+'q8 -3 13 1','none',ink,2.2);
+  }
   return [
     depth(.25,room),
     depth(.45,beam),
