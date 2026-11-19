@@ -1,5 +1,5 @@
 {
-  "gag": "prank",
+  "gag": "door",
   "best": {
     "score": 97.44,
     "expressions_used": [
@@ -7,7 +7,8 @@
       "focus",
       "grin",
       "neutral",
-      "shock"
+      "shock",
+      "worried"
     ],
     "pupils_per_head": 2,
     "fist_contact_error_px_measured_from_sprite": 2.75,
@@ -15,7 +16,7 @@
     "contact_error_px_estimate": 2.75,
     "decoded_video_frame_difference": 15.935,
     "decoded_fist_recoil_difference": 56.062,
-    "decoded_frames": 170,
+    "decoded_frames": 206,
     "max_clipping_fraction": 0.0144,
     "clipped_frames": 6,
     "warnings": [
