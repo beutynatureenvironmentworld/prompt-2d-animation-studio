@@ -1,0 +1,113 @@
+name: Funny Toon Ever — Original Snore Collector Engine Milk Prank
+on:
+  push:
+    branches: [feature/milk-prank-original-midnight-engine-20261119]
+    paths:
+      - '.github/workflows/milk-prank-original-render.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-svg-engine-real-render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install original Snore Collector production software
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg librsvg2-2 libcairo2-2 libgobject-2.0-0
+          python -m pip install -q 'numpy>=1.26,<3' 'Pillow>=10,<13'
+          node --version
+          ffmpeg -version | head -n 1
+          test -f milk-prank-original/art.cjs
+          test -f milk-prank-original/story.json
+          cp midnight-jar/render.py midnight-jar/scene.cjs milk-prank-original/
+          node --check milk-prank-original/art.cjs
+          python - <<'PY'
+          import json
+          s=json.load(open('milk-prank-original/story.json'))
+          assert sum(x['seconds'] for x in s['shots'])==15
+          assert len(s['shots'])==5
+          print('STORYBOARD_PASS: five connected shots, 15 sec, original source engine')
+          PY
+      - name: Render actual Original Snore Collector SVG art as real MP4
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p milk-prank-original/out
+          cd milk-prank-original
+          python render.py story.json out/original_no_audio.mp4 --width 540 --fps 24
+          ffprobe -v error -show_entries format=duration:stream=codec_name,codec_type,width,height -of json out/original_no_audio.mp4
+      - name: Synthesize scene-matched original SFX and produce final vertical MP4
+        shell: bash
+        run: |
+          set -euo pipefail
+          python milk-prank-original/audio.py milk-prank-original/out
+          ffmpeg -y -hide_banner -loglevel error \
+            -i milk-prank-original/out/original_no_audio.mp4 \
+            -i milk-prank-original/out/original_comedy_sfx.wav \
+            -map 0:v:0 -map 1:a:0 \
+            -vf 'scale=1080:1920:flags=lanczos,format=yuv420p' \
+            -r 24 -c:v libx264 -preset veryfast -crf 20 \
+            -c:a aac -b:a 160k -ar 44100 \
+            -movflags +faststart -shortest \
+            milk-prank-original/out/Funny_Toon_Ever_Milk_Prank_Original_Engine.mp4
+      - name: Decode actual video frames and verify moving characters, audio, duration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,subprocess
+          from pathlib import Path
+          from PIL import Image,ImageChops,ImageStat,ImageDraw
+          root=Path('milk-prank-original/out')
+          movie=root/'Funny_Toon_Ever_Milk_Prank_Original_Engine.mp4'
+          info=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(movie)],text=True))
+          vid=next(s for s in info['streams'] if s['codec_type']=='video')
+          aud=any(s['codec_type']=='audio' for s in info['streams'])
+          dur=float(info['format']['duration'])
+          frames=[]
+          for i,t in enumerate([1,3,5,7.5,9.6,12.6]):
+              dst=root/f'frame_{i:02d}.png'
+              subprocess.run(['ffmpeg','-y','-loglevel','error','-ss',str(t),'-i',str(movie),'-frames:v','1',str(dst)],check=True)
+              f=Image.open(dst).convert('RGB'); f.thumbnail((180,320));frames.append(f)
+          contact=Image.new('RGB',(6*180,320),'#f0f0f0')
+          for i,frame in enumerate(frames):contact.paste(frame,(180*i,0))
+          contact.save(root/'VISUAL_CONTACT_SHEET.jpg',quality=90)
+          # Pixel variation alone is not proof of contact/acting quality; still gate a real moving video.
+          variations=[]
+          for i in range(1,len(frames)):
+              diff=ImageChops.difference(frames[0],frames[i])
+              variations.append(round(sum(ImageStat.Stat(diff).mean)/3,2))
+          checks={'render_engine':'original midnight-jar SVG + Cairo librsvg + FFmpeg',
+                  'not_a_diffusion_video':True,'reference_style':'source original Snore Collector art.cjs primitives',
+                  'story':'Clever Milk Carton Reverse Prank','actual_video':movie.name,
+                  'width':vid['width'],'height':vid['height'],'codec':vid['codec_name'],
+                  'duration':dur,'audio':aud,'frame_variations':variations,
+                  'quality_limit':'visual contact and natural limb motion require user review'}
+          checks['verified_encode']=(vid['width']==1080 and vid['height']==1920 and aud
+              and vid['codec_name']=='h264' and 14.8<=dur<=15.3 and max(variations)>1.0)
+          (root/'RENDER_QA.json').write_text(json.dumps(checks,indent=2)+'\n')
+          print('FTE_MILK_PRANK_RENDER_QA',checks)
+          if not checks['verified_encode']:raise SystemExit('Video failed encode checks')
+          PY
+      - name: Keep verified genuine original-engine MP4 and visual audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-Milk-Prank-Original-Snore-Collector-Engine-MP4
+          path: |
+            milk-prank-original/out/Funny_Toon_Ever_Milk_Prank_Original_Engine.mp4
+            milk-prank-original/out/VISUAL_CONTACT_SHEET.jpg
+            milk-prank-original/out/RENDER_QA.json
+          retention-days: 30
+          if-no-files-found: warn
