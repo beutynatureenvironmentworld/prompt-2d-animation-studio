@@ -1,0 +1,16 @@
+name: Slapstick Studio — Optional Open Source Tool Audit
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tool-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Attempt optional GUI animation tool installs on disposable Ubuntu
+        run: bash slapstick-studio/install_optional_tools.sh

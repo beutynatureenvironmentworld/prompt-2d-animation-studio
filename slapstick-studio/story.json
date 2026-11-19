@@ -1,0 +1,24 @@
+{
+  "title": "Original PNG sprite comedy study: wave, picking, jump, kick",
+  "aspect": "9:16",
+  "source_pose_fps": 12,
+  "output_fps": 24,
+  "beats": [
+    {
+      "action": "wave",
+      "duration": 1.5
+    },
+    {
+      "action": "pickup",
+      "duration": 2.5
+    },
+    {
+      "action": "jump",
+      "duration": 1.8
+    },
+    {
+      "action": "kick",
+      "duration": 2.2
+    }
+  ]
+}
