@@ -48,3 +48,6 @@ The offline parser only recognizes the four authored actions and cannot invent n
 
 ### Further optional tools
 The advanced optional GitHub workflow downloads Tahoma2D from its official release and attempts to install OpenToonz from a community Flathub package. Neither GUI app runs in the core CPU renderer. These app installations are temporary on GitHub runners.
+
+### Custom professional pose pack
+To upgrade beyond the deliberately simple generated example, draw or import a consistent set of **13 original 360x480 transparent PNG poses** named as in the generated asset manifest. Keep character proportions, one complete face, and actor foot anchor (180,450) consistent. Add the complete pack under slapstick-studio/assets/poses in GitHub. The CI workflow now **preserves committed PNGs** instead of always regenerating starter artwork. The Python renderer independently reuses PNGs when idle.png exists; it creates defaults only if no art pack is present. This lets Krita, Blender or OpenToonz-authored character poses drive exactly the same fast-action timeline.

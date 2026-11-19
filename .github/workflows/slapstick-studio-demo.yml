@@ -30,8 +30,13 @@ jobs:
         run: |
           python -m pip install -r slapstick-studio/requirements.txt
           if ! command -v ffmpeg >/dev/null; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
-      - name: Generate original modular PNG sprites
-        run: python slapstick-studio/studio.py assets
+      - name: Reuse committed custom PNGs or generate original defaults
+        run: |
+          if [ -f slapstick-studio/assets/poses/idle.png ]; then
+            echo "Using committed custom pose pack; will not overwrite user assets."
+          else
+            python slapstick-studio/studio.py assets
+          fi
       - name: Compile optional English or Sinhala action prompt into JSON
         env:
           STORY_PROMPT: ${{ inputs.story_prompt }}
