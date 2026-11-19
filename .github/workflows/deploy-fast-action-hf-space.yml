@@ -1,0 +1,44 @@
+name: Deploy Fast Action V2 to existing Hugging Face Space (manual only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_space:
+        description: 'An EXISTING Hugging Face Gradio Space, e.g. your-user/fast-action-v2'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  upload-to-existing-space:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      TARGET_SPACE: ${{ inputs.target_space }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install official HF API
+        run: python -m pip install --quiet 'huggingface_hub>=0.30'
+      - name: Validate existing Space and upload CPU files without changing hardware or billing
+        run: |
+          python - <<'PY'
+          import os,re
+          from huggingface_hub import HfApi
+          space=os.environ.get("TARGET_SPACE","").strip()
+          assert re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+",space), "Enter owner/existing-space"
+          token=os.environ.get("HF_TOKEN","").strip()
+          assert token,"Set the HF_TOKEN GitHub Actions secret; never commit it"
+          api=HfApi(token=token)
+          info=api.repo_info(space,repo_type="space")
+          print("Verified pre-existing Space (no creation):",info.id)
+          api.upload_folder(repo_id=space,repo_type="space",folder_path="huggingface-space",
+              path_in_repo="",allow_patterns=["README.md","app.py","renderer.py","requirements.txt","packages.txt"],
+              commit_message="Deploy verified CPU-only Fast Action V2 cartoon")
+          print("Uploaded CPU renderer to existing Space. GPU hardware/billing unchanged.")
+          PY
