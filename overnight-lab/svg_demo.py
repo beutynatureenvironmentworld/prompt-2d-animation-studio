@@ -76,8 +76,8 @@ else:
     # trust check=True above to confirm all encoded frames decoded successfully.
     video_line=next((line for line in info.splitlines() if "Video: h264" in line), "")
     audio_line=next((line for line in info.splitlines() if "Audio: aac" in line), "")
-    size=re.search(r"(?<![0-9])(\\d{2,5})x(\\d{2,5})(?![0-9])",video_line)
-    duration_match=re.search(r"Duration:\\s*(\\d+):(\\d+):(\\d+(?:\\.\\d+)?)",info)
+    size=re.search(r"(?<![0-9])(\d{2,5})x(\d{2,5})(?![0-9])",video_line)
+    duration_match=re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\\.\d+)?)",info)
     assert size and duration_match and audio_line,info[-3000:]
     width,height=map(int,size.groups())
     hh,mm,ss=duration_match.groups()
