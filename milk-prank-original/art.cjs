@@ -151,8 +151,8 @@ function at(story,t,flat=false){
   // The hand/finger contour must appear in front of the crushed box, not behind it.
   if(reach>.80){
     const p=rig.girlPose(t,{reach,shock});
-    actors+=E(p.wrist[0]-2,p.wrist[1]-3,3.3,3.4,ivory);
-    actors+=P('M'+(p.wrist[0]-7)+' '+(p.wrist[1]-6)+'q8 -3 13 1','none',ink,2.2);
+    // NO round wrist joint marker. Only one understated grip line.
+    actors+=P('M'+(p.wrist[0]-5)+' '+(p.wrist[1]-4)+'q6 -2 9 2','none',ink,2.0);
   }
   return [
     depth(.25,room),
