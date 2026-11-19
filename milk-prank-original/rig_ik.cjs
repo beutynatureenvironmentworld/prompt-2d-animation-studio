@@ -22,12 +22,28 @@ function solveTwoBone(a,target,l1,l2,side=1){
  const wrist=[a[0]+ux*length,a[1]+uy*length];
  return {elbow,wrist,error:Math.hypot(target[0]-wrist[0],target[1]-wrist[1])};
 }
-function limb(a,target,l1,l2,side=1,width=4.5){
+/**
+ * Invisible two-bone IK: calculate reachable wrist and knee positions internally,
+ * but show ONE smooth, thick, continuous stroke, never elbow/knee circles or V joints.
+ * The midpoint is a C1-continuous quadratic Bezier. Curvature is close to zero
+ * except during purposeful reaching/stepping, then only a subtle bow is allowed.
+ */
+function limb(a,target,l1,l2,side=1,width=5.4,bend=.02){
  const data=solveTwoBone(a,target,l1,l2,side);
- const svg=path("M"+coord(a)+"L"+coord(data.elbow)+"L"+coord(data.wrist),"none",ink,width)
- +ellipse(data.elbow[0],data.elbow[1],2.6,2.6,skin,ink,1.2)
- +ellipse(data.wrist[0],data.wrist[1],4.2,4.2,skin,ink,1.8);
- return Object.assign({svg},data);
+ const [x0,y0]=a,[x1,y1]=data.wrist;
+ let dx=x1-x0,dy=y1-y0;
+ const len=Math.max(0.001,Math.hypot(dx,dy));
+ const ux=dx/len,uy=dy/len;
+ const mx=(x0+x1)/2,my=(y0+y1)/2;
+ // Analytic IK is an INTERNAL controller only: no skeleton edges are rendered.
+ // Limit perpendicular silhouette deviation to 1px at rest, 5-7px in actions.
+ const fromElbow=(data.elbow[0]-mx)*(-uy)+(data.elbow[1]-my)*ux;
+ const wanted=fromElbow*clamp(bend,0,.30);
+ const maxCurve=clamp(len*.09,1.8,7.2);
+ const curve=clamp(wanted,-maxCurve,maxCurve);
+ const cx=mx-uy*curve,cy=my+ux*curve;
+ const svg=path('M'+coord(a)+'Q'+coord([cx,cy])+' '+coord(data.wrist),'none',ink,width);
+ return Object.assign({svg,curve,control:[cx,cy]},data);
 }
 function legs(x,y,t,type){
  const lift=type==="girl"?13*Math.sin(PI*clamp((t-6.25)/1.6)):0;
@@ -35,8 +51,8 @@ function legs(x,y,t,type){
  // World-anchored left foot prevents the classic cutout-slide artifact.
  const leftFoot=type==="girl"?[50,558]:[229,558];
  const rightFoot=type==="girl"?[124+12*step,558-Math.max(0,lift)]:[303,558];
- const left=limb([x-9,y+124],leftFoot,54,59,1,4.4);
- const right=limb([x+9,y+124],rightFoot,54,59,-1,4.4);
+ const left=limb([x-9,y+124],leftFoot,54,59,1,5.4,.018);
+ const right=limb([x+9,y+124],rightFoot,54,59,-1,5.4,type==="girl" ? .05+.11*Math.sin(PI*clamp((t-6.25)/1.6)) : .022);
  return {svg:left.svg+right.svg
  +path("M"+(leftFoot[0]-6)+" "+(leftFoot[1]+1)+"h13","none",ink,4)
  +path("M"+(rightFoot[0]-6)+" "+(rightFoot[1]+1)+"h13","none",ink,4),
@@ -50,13 +66,13 @@ function girlPose(t,state={}){
  const body=legs(x,y,t,"girl");
  const dress=path("M"+(x-12)+" "+(y+38)+"Q"+x+" "+(y+45)+" "+(x+12)+" "+(y+38)
   +"L"+(x+16)+" "+(y+122)+"Q"+x+" "+(y+134)+" "+(x-17)+" "+(y+119)+"Z","#8782aa",ink,3);
- const left=limb([x-14,y+51],[x-33,y+105],37,34,-1,4.6);
+ const left=limb([x-14,y+51],[x-33,y+105],37,34,-1,5.4,.018);
  const contact=[201,397];
  const wrist=[mix(x+19,contact[0],smooth(reach)),mix(y+107,contact[1],smooth(reach))];
- const right=limb([x+14,y+50],wrist,56,52,1,4.9);
+ const right=limb([x+14,y+50],wrist,56,52,1,5.7,.02+.16*Math.sin(Math.PI*clamp(reach)));
  const pinch=smooth((reach-.7)/.26);
- const fingers=pinch?ellipse(wrist[0]+2,wrist[1]-2,3.2,2.6,skin,ink,1.4)
-    +path("M"+(wrist[0]+3)+" "+(wrist[1]-3)+"q8 -5 13 -3","none",ink,2):"";
+ // Only draw a tiny contact contour when gripping; no ball-shaped wrist marker.
+ const fingers=pinch>.3?path("M"+(wrist[0]-1)+" "+(wrist[1]-2)+"q5 -3 9 1","none",ink,2):"";
  return {x,y,svg:body.svg+dress+left.svg+right.svg+fingers,
     wrist,contact,armError:right.error,knees:body.knees,feet:body.feet,
     legError:body.error,pinch};
@@ -71,8 +87,8 @@ function boyPose(t,state={}){
  const contact=[232,399];
  const leftWrist=[mix(contact[0],x-50,release),mix(contact[1],y+12,release)];
  const rightWrist=[mix(x+28,x+47,release),mix(y+75,y+8,release)];
- const left=limb([x-12,y+50],leftWrist,34,32,-1,4.8);
- const right=limb([x+13,y+50],rightWrist,41,33,1,4.7);
+ const left=limb([x-12,y+50],leftWrist,34,32,-1,5.7,.03+.12*release);
+ const right=limb([x+13,y+50],rightWrist,41,33,1,5.5,.025+.12*release);
  const fingers=release<.6?path("M"+(leftWrist[0]-4)+" "+(leftWrist[1]-2)+"q-4 -6 -8 -1","none",ink,2.2):"";
  return {x,y,svg:body.svg+shirt+left.svg+right.svg+fingers,
    wrist:leftWrist,contact,armError:left.error,feet:body.feet,
@@ -85,7 +101,7 @@ function inspect(){
   return {t,girl_hand_error:+g.armError.toFixed(3),boy_hand_error:+b.armError.toFixed(3),
     leg_error:Math.max(g.legError,b.legError),
     girl_left_foot_y:g.feet[0][1],girl_right_foot_y:g.feet[1][1],
-    girl_knee:g.knees.map(k=>k.map(n=>+n.toFixed(1)))};
+    girl_knee_internal_only:g.knees.map(k=>k.map(n=>+n.toFixed(1)))};
  });
 }
 module.exports={solveTwoBone,limb,legs,girlPose,boyPose,inspect};
