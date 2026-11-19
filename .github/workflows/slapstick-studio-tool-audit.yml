@@ -2,6 +2,11 @@ name: Slapstick Studio — Optional Open Source Tool Audit
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'slapstick-studio/install_optional_tools.sh'
+      - '.github/workflows/slapstick-studio-tool-audit.yml'
 
 permissions:
   contents: read

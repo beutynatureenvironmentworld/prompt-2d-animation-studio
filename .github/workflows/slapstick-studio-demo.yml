@@ -38,6 +38,7 @@ jobs:
           path: |
             slapstick-studio/out/*
             slapstick-studio/story.json
+            slapstick-studio/assets/poses/*.png
             slapstick-studio/assets/poses/manifest.json
           retention-days: 14
           if-no-files-found: warn

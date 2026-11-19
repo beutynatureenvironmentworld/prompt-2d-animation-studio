@@ -27,7 +27,7 @@ To change resolution: run render with --width 1920 --height 1080 for landscape (
 
 ## GitHub Actions
 
-Use Actions > Slapstick Studio — Original Sprite Animation Demo > Run workflow. Pushes changing only this project also render automatically. The MP4 and decoded contact sheet are stored in the workflow's downloadable artifact. The manual Optional Animation Tools Audit installs only apt-available Blender, Krita, Inkscape, Synfig, OpenToonz, Pencil2D and FFmpeg packages on a disposable Ubuntu runner, so desktop tools **do not remain installed** when a GitHub Actions job finishes.
+Use Actions > Slapstick Studio — Original Sprite Animation Demo > Run workflow. Pushes changing only this project also render automatically. The MP4, decoded contact sheet, and all transparent PNG pose assets are stored in the workflow's downloadable artifact. The manual Optional Animation Tools Audit installs only apt-available Blender, Krita, Inkscape, Synfig, OpenToonz, Pencil2D and FFmpeg packages on a disposable Ubuntu runner, so desktop tools **do not remain installed** when a GitHub Actions job finishes.
 
 ## Tutorials informing the general technique
 
