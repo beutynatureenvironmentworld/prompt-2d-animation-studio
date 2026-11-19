@@ -1,0 +1,94 @@
+name: FTE Kaggle — REAL Reference-style 2D Milk Prank MP4
+on:
+  push:
+    branches: [feature/milk-prank-original-midnight-engine-20261119]
+    paths: ['.github/workflows/kaggle-original-style-milk-prank.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  submit-kaggle-reference-render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 28
+    env:
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate original animation source; install official Kaggle CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -q 'kaggle>=1.7,<2'
+          mkdir -p collected
+          test -n "${KAGGLE_USERNAME:-}"
+          test -n "${KAGGLE_API_TOKEN:-}"
+          python -m py_compile milk-prank-original/build_kaggle.py
+          node --check milk-prank-original/art.cjs
+          python milk-prank-original/build_kaggle.py
+          python -m py_compile /tmp/fte-original-style-milk-prank/runner.py
+      - name: Submit ONE private Kaggle CPU render of exact Snore Collector engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat milk-prank-original/KAGGLE_KERNEL_ID.txt
+          kaggle kernels push -p /tmp/fte-original-style-milk-prank 2>&1 | tee collected/SUBMISSION.txt
+      - name: Poll Kaggle; collect only real MP4 and RESULT manifest
+        shell: bash
+        run: |
+          set +e
+          kid=$(cat milk-prank-original/KAGGLE_KERNEL_ID.txt)
+          echo "$kid" >collected/KAGGLE_KERNEL_ID.txt
+          for step in $(seq 1 35); do
+            kaggle kernels status "$kid" >collected/KAGGLE_STATUS.txt 2>&1
+            tail -n 1 collected/KAGGLE_STATUS.txt
+            if grep -Eq 'KernelWorkerStatus\.(COMPLETE|ERROR|CANCELLED)' collected/KAGGLE_STATUS.txt; then break; fi
+            sleep 20
+          done
+          timeout 120s kaggle kernels output "$kid" \
+            -p collected --file-pattern 'RESULT\.json$|Funny_Toon_Ever_Milk_Prank_Kaggle_Original_Engine\.mp4$' \
+            >collected/COLLECT_LOG.txt 2>&1
+          tail -n 12 collected/COLLECT_LOG.txt
+          find collected -maxdepth 4 -type f -printf '%p (%s bytes)\n'
+      - name: Independently verify Kaggle rendered MP4 and attach official QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import json,subprocess
+          d=Path('collected')
+          report=next(d.rglob('RESULT.json'),None)
+          video=next(d.rglob('Funny_Toon_Ever_Milk_Prank_Kaggle_Original_Engine.mp4'),None)
+          qa={'verified':False,'reason':'No Kaggle video or RESULT.json'}
+          if report:
+            m=json.loads(report.read_text())
+            qa['kaggle_report_status']=m.get('status')
+            qa['kaggle_failure']=m.get('error')
+            if video and m.get('status')=='completed' and m.get('video_verified') is True:
+              p=json.loads(subprocess.check_output(['ffprobe','-v','error',
+                '-show_format','-show_streams','-of','json',str(video)],text=True))
+              v=next(x for x in p['streams'] if x['codec_type']=='video')
+              audio=any(x['codec_type']=='audio' for x in p['streams'])
+              dur=float(p['format']['duration'])
+              qa.update({'verified':v['width']==1080 and v['height']==1920 and
+                        v['codec_name']=='h264' and dur>=14.8 and audio,
+                        'width':v['width'],'height':v['height'],'duration':dur,
+                        'has_audio':audio,'file_bytes':video.stat().st_size,
+                        'method':'Kaggle CPU — original Snore Collector SVG engine, not neural AI'})
+              qa['reason']='independently validated Kaggle reference-style MP4' if qa['verified'] else 'format/audio/duration invalid'
+          (d/'COLLECTION_QA.json').write_text(json.dumps(qa,indent=2)+'\n')
+          print('FTE_KAGGLE_ORIGINAL_RENDER_QA',qa)
+          if not qa['verified']: raise SystemExit('Kaggle render not verified')
+          PY
+      - name: Upload authentic Kaggle render and QA (never substitute local clip)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-Kaggle-Snore-Collector-Style-Milk-Prank-Real-MP4
+          path: collected/
+          retention-days: 30
+          if-no-files-found: warn
