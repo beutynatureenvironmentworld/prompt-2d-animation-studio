@@ -22,7 +22,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install -q 'kaggle>=1.7,<2'
+          python -m pip install -q 'kaggle>=1.7,<2' 'six>=1.16,<2'
           mkdir -p collected
           test -n "${KAGGLE_USERNAME:-}"
           test -n "${KAGGLE_API_TOKEN:-}"
