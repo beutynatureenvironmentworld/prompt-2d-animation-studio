@@ -118,7 +118,7 @@ function at(story,t,flat=false){
 
   function carton(){
     // Local x=-31 is the OPEN straw pointing at the GIRL. Local x=+31 is sealed.
-    const r=mix(67,-9,turn);
+    const r=-9+360*turn;
     const crush=Math.max(squeeze,backfire);
     const scaleX=1-.15*crush, scaleY=1+.13*crush;
     let s=P('M-30 -20H29L31 20H-30Z','#e7e9f6',ink,3);
