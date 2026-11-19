@@ -31,7 +31,10 @@ function limb(a,target,l1,l2,side=1,width=4.5){
 }
 function legs(x,y,t,type){
  const lift=type==="girl"?13*Math.sin(PI*clamp((t-6.25)/1.6)):0;
- const leftFoot=[x-37,558],rightFoot=[x+37,558-Math.max(0,lift)];
+ const step=smooth((t-6.25)/1.6);
+ // World-anchored left foot prevents the classic cutout-slide artifact.
+ const leftFoot=type==="girl"?[50,558]:[229,558];
+ const rightFoot=type==="girl"?[124+12*step,558-Math.max(0,lift)]:[303,558];
  const left=limb([x-9,y+124],leftFoot,54,59,1,4.4);
  const right=limb([x+9,y+124],rightFoot,54,59,-1,4.4);
  return {svg:left.svg+right.svg
