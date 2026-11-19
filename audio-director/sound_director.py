@@ -92,7 +92,7 @@ def render(video,output,config,work):
         fc.append(f"[{idx}:a:0]aresample=48000,aformat=channel_layouts=stereo,volume={volume:.3f},adelay={delay}|{delay}[cue{idx}]")
         tracks.append(f"[cue{idx}]")
         rec.append({"at":round(start,3),"volume":volume,"cue":str(audio.name)})
-    fc.append("".join(tracks)+f"amix=inputs={len(tracks)}:duration=first:dropout_transition=0:normalize=0,alimiter=limit=0.85:level=disabled,aresample=48000[mixed]")
+    fc.append("".join(tracks)+f"amix=inputs={len(tracks)}:duration=first:dropout_transition=0:normalize=0,alimiter=limit=0.85:level=0,aresample=48000[mixed]")
     cmd+=["-filter_complex",";".join(fc),"-map","0:v:0","-map","[mixed]",
           "-c:v","copy","-c:a","aac","-b:a","192k",
           "-movflags","+faststart","-t",str(duration),str(output)]
