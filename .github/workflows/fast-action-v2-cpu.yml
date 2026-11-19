@@ -1,0 +1,49 @@
+name: Fast Action V2 — Motion Quality and CPU MP4
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'fast-action-cpu/v2/**'
+      - '.github/workflows/fast-action-v2-cpu.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  original-2d-motion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU render and decoded-frame QA
+        run: |
+          python -m pip install -q Pillow opencv-python-headless
+          if ! command -v ffmpeg >/dev/null; then sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg; fi
+      - name: Render actual 12-second H264 MP4
+        run: |
+          mkdir -p fast-action-cpu/v2/out
+          python fast-action-cpu/v2/render_fast_action_v2.py \
+            --output fast-action-cpu/v2/out/Fast_Action_Donut_Chase_V2_CPU.mp4 \
+            --contact-sheet fast-action-cpu/v2/out/contact_v2.jpg
+      - name: Validate decoded frames, file size, and actual motion
+        run: |
+          python fast-action-cpu/v2/quality_v2.py \
+            fast-action-cpu/v2/out/Fast_Action_Donut_Chase_V2_CPU.mp4 \
+            --report fast-action-cpu/v2/out/quality_v2.json
+          test -s fast-action-cpu/v2/out/contact_v2.jpg
+      - name: Attach real render, contact sheet and QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fast-action-v2-original-cpu
+          path: |
+            fast-action-cpu/v2/out/Fast_Action_Donut_Chase_V2_CPU.mp4
+            fast-action-cpu/v2/out/contact_v2.jpg
+            fast-action-cpu/v2/out/quality_v2.json
+          retention-days: 14
+          if-no-files-found: warn
