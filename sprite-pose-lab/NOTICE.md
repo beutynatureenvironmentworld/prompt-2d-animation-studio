@@ -1,0 +1,1 @@
+Original procedural artwork and code prepared for the project; do not redistribute frames extracted from third-party reference videos as character sprite libraries without authorization. Fonts, soundtracks, and third-party assets must have compatible rights. Any production character identity should be unique to this studio.
