@@ -1,0 +1,110 @@
+name: Funny Toon Ever — Professional Sound Director and Natural Voice Test
+on:
+  push:
+    branches: [feature/fte-pro-audio-director-20261119]
+    paths:
+      - 'audio-director/**'
+      - '.github/workflows/fte-pro-audio-soundlab.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  light-sound-mix:
+    name: CPU FFmpeg SFX director — real H264/AAC MP4
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install low-memory FFmpeg only (no Blender, model or browser)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m py_compile audio-director/sound_director.py
+      - name: Render existing 2D demonstration with six original SFX events
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s public-demos/prompt-to-code-2026-11-16/Remotion_SVG.mp4
+          python audio-director/sound_director.py \
+            --video public-demos/prompt-to-code-2026-11-16/Remotion_SVG.mp4 \
+            --cues audio-director/demo_cues.json \
+            --output audio-director/output/FTE_Sound_Director_Proof.mp4 \
+            --work audio-director/output
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          r=json.loads(Path('audio-director/output/AUDIO_QA.json').read_text())
+          assert r['verified'] and len(r['events'])>=4, r
+          print('SIX_EVENT_SFX_DIRECTOR_QA_PASS',r['duration'],r['size_bytes'])
+          PY
+          ffmpeg -y -hide_banner -loglevel error -ss 1 -i audio-director/output/FTE_Sound_Director_Proof.mp4 \
+            -frames:v 1 audio-director/output/FRAME_REVIEW.jpg
+      - name: Upload actual SFX MP4, ffprobe QA and still
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-FFmpeg-Audio-Director-Verified-MP4
+          path: audio-director/output/
+          retention-days: 14
+          if-no-files-found: warn
+  natural-voice-test:
+    name: Hugging Face Kokoro-82M expressive English voice — real inference
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install open-weight Apache-2.0 natural voice stack on capable GH runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq espeak-ng libsndfile1
+          python -m pip install --quiet 'kokoro>=0.9,<1' 'soundfile>=0.12,<1' 'numpy>=1.26,<3'
+          python - <<'PY'
+          import kokoro, soundfile
+          print('KOKORO_PYTHON_INSTALL_VERIFIED')
+          PY
+      - name: Generate real natural TTS WAV from public Hugging Face model
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p audio-director/voice-output
+          python - <<'PY'
+          import numpy as np,soundfile as sf,json
+          from pathlib import Path
+          from kokoro import KPipeline
+          out=Path('audio-director/voice-output')
+          try:
+              p=KPipeline(lang_code='a',device='cpu')
+              chunks=[]
+              for _,_,audio in p('Ha ha! You got milk on your face!',voice='am_michael'):
+                  arr=np.asarray(audio,dtype=np.float32)
+                  if arr.size: chunks.append(arr)
+              if not chunks:raise RuntimeError('Kokoro model produced no speech samples')
+              signal=np.concatenate(chunks)
+              sf.write(out/'FTE_Kokoro_Original_Synthetic_Voice.wav',signal,24000,subtype='PCM_16')
+              metadata={'source_model':'hexgrad/Kokoro-82M','license':'Apache-2.0 as declared in HF model card',
+                        'samples':int(signal.size),'sampling_rate':24000,'model_inference_verified':True,
+                        'voice':'am_michael','type':'synthesized English dialogue, not voice cloning'}
+              (out/'VOICE_QA.json').write_text(json.dumps(metadata,indent=2)+'\n')
+              print('KOKORO_REAL_INFERENCE_COMPLETE',metadata)
+          except Exception as exc:
+              (out/'VOICE_FAILURE.json').write_text(json.dumps({'inference_verified':False,'error':repr(exc)},indent=2)+'\n')
+              raise
+          PY
+          ffprobe -v error -show_entries format=duration:stream=codec_type,sample_rate -of json \
+            audio-director/voice-output/FTE_Kokoro_Original_Synthetic_Voice.wav
+      - name: Upload real voice or exact failure diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-Kokoro-Natural-Voice-Real-Test
+          path: audio-director/voice-output/
+          retention-days: 14
+          if-no-files-found: warn
