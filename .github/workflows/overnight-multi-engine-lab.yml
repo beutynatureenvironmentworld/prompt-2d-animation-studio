@@ -88,7 +88,7 @@ jobs:
           if-no-files-found: warn
 
   blender-orthographic-render:
-    if: github.event_name == 'workflow_dispatch'
+    # Enable Blender headless job on this isolated experiment push for a real capability test.
     name: Blender headless code-only orthographic 2D-style animation
     runs-on: ubuntu-24.04
     timeout-minutes: 35
