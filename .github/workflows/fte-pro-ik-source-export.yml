@@ -1,0 +1,32 @@
+name: FTE V2 Source Export for Exact Render QA
+on:
+  push:
+    branches: [feature/fte-milk-prank-ik-sound-studio-v2-20261119]
+    paths: ['.github/workflows/fte-pro-ik-source-export.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package-verified-experimental-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact original animation source and pack self-contained pipeline
+        shell: bash
+        run: |
+          set -euo pipefail
+          node milk-prank-original/test_ik.cjs > /tmp/ik_test_stdout.log
+          mkdir -p export/milk-prank-original export/midnight-jar
+          cp milk-prank-original/{art.cjs,rig_ik.cjs,test_ik.cjs,story.json,audio_pro.py,qa_video.py,kokoro_voice.py} export/milk-prank-original/
+          cp midnight-jar/{render.py,scene.cjs} export/midnight-jar/
+          cp /tmp/ik_test_stdout.log export/IK_SMOKE_PASS.log
+          (cd export && zip -qr ../FTE_Pro_IK_Original_Source_Kit.zip milk-prank-original midnight-jar IK_SMOKE_PASS.log)
+          test -s FTE_Pro_IK_Original_Source_Kit.zip
+          ls -lah FTE_Pro_IK_Original_Source_Kit.zip
+      - name: Provide reproducible source for actual video rendering and QA
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-Pro-IK-Exact-Original-Source-Kit
+          path: FTE_Pro_IK_Original_Source_Kit.zip
+          retention-days: 14
