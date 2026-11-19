@@ -1,0 +1,206 @@
+{
+  "title": "The Clever Milk Carton Reverse Prank",
+  "source_reference": "The Snore Collector: reuse same code, SVG primitives, colors, character silhouette, background moonlit bedroom",
+  "shots": [
+    {
+      "seconds": 3,
+      "note": "Establish original two stick cartoon roommates and boy squirting girl with milk first. Headband girl drenched.",
+      "camera": [
+        0,
+        0,
+        1,
+        2,
+        0,
+        1.03
+      ],
+      "light": [
+        0.7,
+        0.87
+      ],
+      "first": [
+        0,
+        1
+      ],
+      "turn": [
+        0,
+        0
+      ],
+      "reach": [
+        0,
+        0
+      ],
+      "squeeze": [
+        0,
+        0
+      ],
+      "backfire": [
+        0,
+        0
+      ],
+      "laugh": [
+        0,
+        0
+      ]
+    },
+    {
+      "seconds": 3,
+      "note": "Boy grins and pivots the milk carton, ending with sealed right end nearest his mouth and straw pointed LEFT toward the girl.",
+      "camera": [
+        2,
+        0,
+        1.03,
+        11,
+        5,
+        1.12
+      ],
+      "light": [
+        0.87,
+        1
+      ],
+      "first": [
+        1,
+        1
+      ],
+      "turn": [
+        0,
+        1
+      ],
+      "reach": [
+        0,
+        0
+      ],
+      "squeeze": [
+        0,
+        0
+      ],
+      "backfire": [
+        0,
+        0
+      ],
+      "laugh": [
+        0,
+        0
+      ]
+    },
+    {
+      "seconds": 3,
+      "note": "Girl reaches with right hand to center of carton while boy holds sealed end. Build pause before squeeze.",
+      "camera": [
+        11,
+        5,
+        1.12,
+        20,
+        10,
+        1.17
+      ],
+      "light": [
+        1,
+        1
+      ],
+      "first": [
+        1,
+        1
+      ],
+      "turn": [
+        1,
+        1
+      ],
+      "reach": [
+        0,
+        1
+      ],
+      "squeeze": [
+        0,
+        0.2
+      ],
+      "backfire": [
+        0,
+        0
+      ],
+      "laugh": [
+        0,
+        0
+      ]
+    },
+    {
+      "seconds": 3,
+      "note": "Girl squeezes boy carton; liquid clearly shoots from left straw into her own face. Big shocked eyes and droplets.",
+      "camera": [
+        20,
+        10,
+        1.17,
+        5,
+        0,
+        1.1
+      ],
+      "light": [
+        1,
+        1.05
+      ],
+      "first": [
+        1,
+        1
+      ],
+      "turn": [
+        1,
+        1
+      ],
+      "reach": [
+        1,
+        1
+      ],
+      "squeeze": [
+        0.2,
+        1
+      ],
+      "backfire": [
+        0,
+        1
+      ],
+      "laugh": [
+        0,
+        0.25
+      ]
+    },
+    {
+      "seconds": 3,
+      "note": "Hold reaction while boy belly laughs and girl blinks soaked, comedic payoff.",
+      "camera": [
+        5,
+        0,
+        1.1,
+        0,
+        0,
+        1.02
+      ],
+      "light": [
+        1.05,
+        0.86
+      ],
+      "first": [
+        1,
+        1
+      ],
+      "turn": [
+        1,
+        1
+      ],
+      "reach": [
+        1,
+        0.7
+      ],
+      "squeeze": [
+        1,
+        1
+      ],
+      "backfire": [
+        1,
+        1
+      ],
+      "laugh": [
+        0.25,
+        1
+      ]
+    }
+  ]
+}
