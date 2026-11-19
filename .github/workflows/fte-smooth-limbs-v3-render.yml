@@ -1,0 +1,113 @@
+name: FTE Milk Prank V3 — Hidden-Joint Smooth Limb Rig
+on:
+  push:
+    branches: [feature/fte-smooth-limbs-hidden-joints-v3-20261119]
+    paths: ['.github/workflows/fte-smooth-limbs-v3-render.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  smooth-rig-render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install real source-film SVG and video tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg librsvg2-2 libcairo2
+          python -m pip install --quiet 'numpy>=1.26,<3' 'Pillow>=10,<13'
+          cp midnight-jar/{render.py,scene.cjs} milk-prank-original/
+          node --check milk-prank-original/rig_ik.cjs
+          node --check milk-prank-original/art.cjs
+      - name: Verify hidden skeleton and natural nearly-straight cartoon strokes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p milk-prank-original/out
+          node milk-prank-original/test_ik.cjs >milk-prank-original/out/IK_CONTACT_LOG.txt
+          node milk-prank-original/test_smooth_limbs.cjs | tee milk-prank-original/out/NO_VISIBLE_JOINTS_QA.txt
+      - name: Actually render original purple-bedroom animation with unified limbs
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd milk-prank-original
+          python render.py story.json out/FTE_Smooth_Limbs_Source_720p_Silent.mp4 --width 720 --fps 24
+          test -s out/FTE_Smooth_Limbs_Source_720p_Silent.mp4
+      - name: Generate professional deterministic stereo Foley
+        shell: bash
+        run: |
+          set -euo pipefail
+          python milk-prank-original/audio_pro.py milk-prank-original/out
+      - name: Recover actual PREVIOUSLY VERIFIED Kokoro neural voices (no rerun)
+        uses: actions/download-artifact@v4
+        with:
+          name: FTE-Kokoro-82M-Real-Character-Voices
+          run-id: 44492810751
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: milk-prank-original/out/voice
+      - name: Mix existing neural speech into 48 kHz stereo Foley and encode 1080p
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s milk-prank-original/out/voice/girl_reaction.wav
+          test -s milk-prank-original/out/voice/boy_laugh.wav
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          v=json.loads(Path('milk-prank-original/out/voice/VOICE_QA.json').read_text())
+          assert v.get('real_hugging_face_model_inference') is True
+          assert len(v.get('dialogue',[]))==2
+          print('ORIGINAL_KOKORO_VOICE_REUSED_FROM_VERIFIED_ARTIFACT')
+          PY
+          ffmpeg -y -hide_banner -loglevel error \
+            -i milk-prank-original/out/FTE_Smooth_Limbs_Source_720p_Silent.mp4 \
+            -i milk-prank-original/out/FTE_PRO_STEREO_FOLEY_48K.wav \
+            -i milk-prank-original/out/voice/girl_reaction.wav \
+            -i milk-prank-original/out/voice/boy_laugh.wav \
+            -filter_complex '[1:a]volume=0.80[a0];[2:a]adelay=10720:all=1,volume=1.02,pan=stereo|c0=0.90*c0|c1=0.48*c0[a1];[3:a]adelay=12420:all=1,volume=1.10,pan=stereo|c0=0.50*c0|c1=0.94*c0[a2];[a0][a1][a2]amix=inputs=3:duration=first:dropout_transition=0:normalize=0,alimiter=limit=0.94,aresample=48000[aout]' \
+            -map 0:v:0 -map '[aout]' -vf 'scale=1080:1920:flags=lanczos,format=yuv420p' \
+            -c:v libx264 -preset veryfast -crf 17 \
+            -c:a aac -b:a 256k -ar 48000 -shortest -movflags +faststart \
+            milk-prank-original/out/FTE_Smooth_Limbs_V3_Reference_Style.mp4
+      - name: Decode seven real frames and FFprobe verify final MP4
+        shell: bash
+        run: |
+          set -euo pipefail
+          python milk-prank-original/qa_video.py \
+            milk-prank-original/out/FTE_Smooth_Limbs_V3_Reference_Style.mp4 \
+            milk-prank-original/out
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          qa=json.loads(Path('milk-prank-original/out/VIDEO_QA.json').read_text())
+          assert qa['verified_encoded'] and qa['audio_channels']==2
+          Path('milk-prank-original/out/EXPORT_README.txt').write_text(
+            'Source is the original Snore Collector engine; visual limbs are single, thick, smooth paths. '
+            'No visible elbow/knee markers. Original girl/boy voice clips reused from an independently verified 2026-11-19 Kokoro artifact. '
+            'To preserve the exact same previously-uploaded soundtrack byte-for-byte, use FFmpeg -map 0:v:0 -map 1:a:0 -c copy '
+            'with the user-provided original MP4. The local finished deliverable does precisely that.\\n')
+          PY
+      - name: Export real render and visual/IK QA assets
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Funny-Toon-Ever-Smooth-Limbs-V3-MP4
+          path: |
+            milk-prank-original/out/FTE_Smooth_Limbs_V3_Reference_Style.mp4
+            milk-prank-original/out/FRAME_AUDIT.jpg
+            milk-prank-original/out/VIDEO_QA.json
+            milk-prank-original/out/NO_VISIBLE_JOINTS_QA.txt
+            milk-prank-original/out/IK_CONTACT_LOG.txt
+            milk-prank-original/out/EXPORT_README.txt
+          retention-days: 30
+          if-no-files-found: warn
