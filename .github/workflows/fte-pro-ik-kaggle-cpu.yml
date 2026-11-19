@@ -1,0 +1,109 @@
+name: FTE V2 Kaggle — Source-Matched IK and 48k Stereo Foley
+on:
+  push:
+    branches: [feature/fte-milk-prank-ik-sound-studio-v2-20261119]
+    paths: ['.github/workflows/fte-pro-ik-kaggle-cpu.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  kaggle-private-cpu-render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Kaggle API client and independent PyAV MP4 decoder
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet 'kaggle>=1.7,<2' 'six>=1.16,<2' 'av>=12,<17' 'Pillow>=10,<13'
+          mkdir -p output
+          test -n "${KAGGLE_USERNAME:-}"
+          test -n "${KAGGLE_API_TOKEN:-}"
+          python -m py_compile milk-prank-original/build_kaggle_ik.py
+          node --check milk-prank-original/art.cjs
+          node milk-prank-original/test_ik.cjs
+          python milk-prank-original/build_kaggle_ik.py
+          python -m py_compile /tmp/fte-original-style-milk-prank-ik-v2/runner.py
+      - name: Submit one actual private Kaggle CPU render; NO GPU time used
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp milk-prank-original/KAGGLE_KERNEL_ID.txt output/KERNEL_ID.txt
+          kaggle kernels push -p /tmp/fte-original-style-milk-prank-ik-v2 | tee output/SUBMISSION.txt
+      - name: Poll and collect genuine Kaggle new IK MP4 and manifest
+        shell: bash
+        run: |
+          set +e
+          kid=$(cat output/KERNEL_ID.txt)
+          complete=0
+          for i in $(seq 1 46); do
+            kaggle kernels status "$kid" >output/STATUS.txt 2>&1
+            tail -n 1 output/STATUS.txt
+            if grep -q 'KernelWorkerStatus.COMPLETE' output/STATUS.txt; then complete=1; break; fi
+            if grep -Eq 'KernelWorkerStatus.(ERROR|CANCELLED)' output/STATUS.txt; then break; fi
+            sleep 20
+          done
+          timeout 150s kaggle kernels output "$kid" -p output \
+            --file-pattern 'RESULT\.json$|Funny_Toon_Ever_Milk_Prank_Pro_IK_Stereo_Kaggle\.mp4$' >output/COLLECT_LOG.txt 2>&1
+          tail -n 15 output/COLLECT_LOG.txt
+          echo "KAGGLE_TERMINAL_COMPLETE=$complete"
+          find output -maxdepth 4 -type f -printf '%p (%s bytes)\n'
+      - name: Independently decode actual Kaggle MP4 using PyAV and inspect frames
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import av
+          from PIL import Image
+          root=Path('output')
+          manifest=next(root.rglob('RESULT.json'),None)
+          movie=next(root.rglob('Funny_Toon_Ever_Milk_Prank_Pro_IK_Stereo_Kaggle.mp4'),None)
+          assert manifest and movie, 'Kaggle MP4 or manifest missing'
+          meta=json.loads(manifest.read_text())
+          assert meta['status']=='completed' and meta['video_verified'] is True,meta
+          assert meta.get('gpu_requested') is False
+          assert meta.get('ik_test_passed') is True
+          assert meta.get('stereo_48khz_foley') is True
+          f=av.open(str(movie))
+          video=next(s for s in f.streams if s.type=='video')
+          audio=next(s for s in f.streams if s.type=='audio')
+          duration=float(f.duration)/1000000 if f.duration else 0
+          frames=[];n=0
+          for frame in f.decode(video=0):
+            if n in (12,66,132,180,228,275,330):
+              im=frame.to_image().convert('RGB');im.thumbnail((170,302))
+              frames.append(im)
+            n+=1
+          assert len(frames)==7, 'Not enough truly decoded video frames'
+          sheet=Image.new('RGB',(170*len(frames),302),'#f0f0f0')
+          for j,im in enumerate(frames):sheet.paste(im,(170*j,0))
+          sheet.save(root/'KAGGLE_REAL_FRAME_AUDIT.jpg',quality=90)
+          qa={'verified':video.width==1080 and video.height==1920 and
+                14.8<=duration<=15.3 and video.codec_context.name=='h264'
+                and audio.codec_context.name=='aac' and n>=340,
+              'method':'original Snore Collector SVG + math IK + 48 kHz stereo Foley on Kaggle CPU',
+              'width':video.width,'height':video.height,'seconds':duration,
+              'video_codec':video.codec_context.name,'audio_codec':audio.codec_context.name,
+              'frames_decoded':n,'file_bytes':movie.stat().st_size,
+              'h3_inference_verified':False,'neural_sfx_inference':False}
+          (root/'KAGGLE_PYAV_QA.json').write_text(json.dumps(qa,indent=2)+'\n')
+          print('KAGGLE_ACTUAL_IK_STEREO_MILK_PRANK_QA',qa)
+          assert qa['verified']
+          PY
+      - name: Save verified authentic Kaggle original-style IK MP4 and frame audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTE-Pro-IK-Stereo-Milk-Prank-REAL-KAGGLE-MP4
+          path: output/
+          retention-days: 30
+          if-no-files-found: warn
