@@ -1,0 +1,42 @@
+name: Milk Prank V2 - Render with Sounds
+on:
+  workflow_dispatch:
+    inputs:
+      resolution:
+        type: choice
+        description: Output resolution
+        required: true
+        default: '1080p'
+        options:
+          - '1080p'
+          - '720p'
+permissions:
+  contents: read
+jobs:
+  create-mp4:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: sprite-pose-lab/requirements.txt
+      - name: Install FFmpeg and Python packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install pillow numpy
+      - name: Render upgraded 2D cartoon with synchronized audio
+        env:
+          RESOLUTION: ${{ inputs.resolution }}
+        run: |
+          python sprite-pose-lab/milk_prank_v2.py --resolution "$RESOLUTION" --output milk-prank-v2.mp4
+      - name: Upload playable 24 FPS H264 + AAC MP4
+        uses: actions/upload-artifact@v4
+        with:
+          name: milk-prank-v2-${{ inputs.resolution }}
+          path: milk-prank-v2.mp4
+          retention-days: 14
+          if-no-files-found: error
