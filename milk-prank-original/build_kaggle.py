@@ -31,7 +31,7 @@ files=__ASSETS__
 def run(cmd,timeout=300,cwd=None):
  print("FTE_EXEC",cmd,flush=True)
  subprocess.run(cmd,check=True,timeout=timeout,cwd=cwd)
-def write(x):REPORT.write_text(json.dumps(x,indent=2,default=str)+"\\\\n")
+def write(x):REPORT.write_text(json.dumps(x,indent=2,default=str)+chr(10))
 state={"status":"initializing","engine":"original Snore Collector SVG+librsvg+FFmpeg",
        "model":"procedural original 2D / no neural image generation",
        "gpu_requested":False,"h3_inference_verified":False,"video_verified":False}
