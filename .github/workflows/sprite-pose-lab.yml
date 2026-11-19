@@ -1,0 +1,47 @@
+name: Sprite Pose Lab - CPU render
+on:
+  workflow_dispatch:
+    inputs:
+      width:
+        description: Output width (720 or 1080)
+        required: true
+        default: '720'
+        type: choice
+        options:
+          - '720'
+          - '1080'
+
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: sprite-pose-lab/requirements.txt
+      - name: Install graphics and video tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libcairo2
+          python -m pip install -r sprite-pose-lab/requirements.txt
+      - name: Build original transparent sprite library
+        run: python sprite-pose-lab/sprite_factory.py
+      - name: Create editable storyboard
+        run: python sprite-pose-lab/make_story.py
+      - name: CPU render video
+        env:
+          WIDTH: ${{ inputs.width }}
+        run: |
+          HEIGHT=$(( WIDTH * 16 / 9 ))
+          python sprite-pose-lab/render.py --width "$WIDTH" --height "$HEIGHT" --output sprite-pose-lab-demo.mp4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sprite-pose-lab-demo
+          path: sprite-pose-lab-demo.mp4
+          retention-days: 14
+          if-no-files-found: error
