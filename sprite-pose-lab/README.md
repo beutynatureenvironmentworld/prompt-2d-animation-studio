@@ -33,3 +33,20 @@ Animation uses **12 distinct frames per second**, duplicated into a 24-FPS MP4. 
 ## GitHub Actions
 
 Under the repository Actions tab, select **Sprite Pose Lab - CPU render**, click Run workflow and choose width 720 or 1080. Download the sprite-pose-lab-demo artifact after the job completes. The workflow is manual, so it does not compete with existing scheduled rendering jobs.
+
+## New: Milk Prank V2 (sound-synchronized original slapstick short)
+
+`milk_prank_v2.py` renders an **11.5-second** original cartoon short at **12 pose frames/sec** (exported to **24 FPS**, H.264 video and AAC audio). It keeps the original Pip/Luma character proportions while updating wardrobe to a yellow cap and blue shirt for the boy and a coral-pink dress and brown bun for the girl. This is a dedicated procedural character animation, separate from the sprite_factory demo. No inference model or GPU is required.
+
+Features: expressive angry eyebrows; sneaky toothy grin; a moving/rotating milk carton with a prominent straw; timed hand strike, squeeze and milk blast; face splashes and persistent dripping; eye-pop elastic springs; camera punch zoom/shake; carton drop; bouncing laugh reaction; and synthesized whoosh, pop, boing, splash and giggle effects.
+
+```bash
+# Inside sprite-pose-lab/
+python -m pip install pillow numpy
+python milk_prank_v2.py --resolution 1080p --output milk-prank-v2.mp4
+python milk_prank_v2.py --preview --output milk-prank-v2.mp4
+```
+
+For a no-install workflow, open **Actions → Milk Prank V2 - Render with Sounds → Run workflow**, select 720p or 1080p, and retrieve the MP4 artifact. The workflow runs **only when manually dispatched**, so it does not interfere with existing scheduled projects.
+
+All characters, code and audio are original procedural assets. This demonstrates a general 2D comedy technique; it does not reproduce other creators' protected characters or frames. This second generation is a working prototype; high-end hand-drawn acting and custom performance audio remain future improvements.
