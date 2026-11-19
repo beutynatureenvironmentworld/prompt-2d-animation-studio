@@ -36,3 +36,12 @@ Use Actions > Slapstick Studio — Original Sprite Animation Demo > Run workflow
 - Jumping: https://www.youtube.com/watch?v=xymBBykaEk0
 
 No material or character sprite from those tutorials is copied. For manual character design, use Blender Grease Pencil / OpenToonz / Krita / Inkscape. The headless render requires Pillow and FFmpeg only.
+
+## Simple prompt input (limited, offline)
+
+Use GitHub Actions workflow_dispatch story_prompt, such as: Girl waves, picks up a camera, jumps, and kicks the ball. Or on Linux:
+
+    python slapstick-studio/prompt_story.py --prompt 'Girl waves and jumps and kicks a ball' --output slapstick-studio/out/story_from_prompt.json
+    python slapstick-studio/studio.py render --story slapstick-studio/out/story_from_prompt.json
+
+The offline parser only recognizes the four authored actions and cannot invent new behaviors; it also recognizes a small set of Sinhala keywords.

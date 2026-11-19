@@ -2,6 +2,12 @@ name: Slapstick Studio — Original Sprite Animation Demo
 
 on:
   workflow_dispatch:
+    inputs:
+      story_prompt:
+        description: 'Optional simple prompt with wave, pickup, jump, kick actions'
+        required: false
+        type: string
+        default: ''
   push:
     branches: [main]
     paths:
@@ -26,8 +32,18 @@ jobs:
           if ! command -v ffmpeg >/dev/null; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
       - name: Generate original modular PNG sprites
         run: python slapstick-studio/studio.py assets
+      - name: Compile optional English or Sinhala action prompt into JSON
+        env:
+          STORY_PROMPT: ${{ inputs.story_prompt }}
+        run: |
+          if [ -n "$STORY_PROMPT" ]; then
+            python slapstick-studio/prompt_story.py --prompt "$STORY_PROMPT" --output slapstick-studio/out/custom_story.json
+            echo "STORY_FILE=slapstick-studio/out/custom_story.json" >> "$GITHUB_ENV"
+          else
+            echo "STORY_FILE=slapstick-studio/story.json" >> "$GITHUB_ENV"
+          fi
       - name: Render actual portrait H264 1080p video
-        run: python slapstick-studio/studio.py render
+        run: python slapstick-studio/studio.py render --story "$STORY_FILE"
       - name: Decode MP4 and validate motion
         run: python slapstick-studio/studio.py verify
       - name: Upload actual demo and quality evidence
