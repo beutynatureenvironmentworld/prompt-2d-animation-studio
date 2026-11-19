@@ -22,6 +22,10 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install -q 'kaggle>=1.7,<2' 'six>=1.16,<2' 'Pillow>=10,<13'
+          if ! command -v ffprobe >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq ffmpeg
+          fi
           command -v ffprobe
           mkdir -p output
       - name: Read completed Kaggle job and download authentic MP4 (no new job)
