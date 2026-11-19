@@ -1,0 +1,18 @@
+name: Slapstick Studio — OpenToonz and Tahoma2D Install Test
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'slapstick-studio/install_more_tools.sh'
+      - '.github/workflows/slapstick-studio-advanced-tools.yml'
+permissions:
+  contents: read
+jobs:
+  install-and-verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Tahoma2D and OpenToonz installation on GitHub Ubuntu
+        run: bash slapstick-studio/install_more_tools.sh

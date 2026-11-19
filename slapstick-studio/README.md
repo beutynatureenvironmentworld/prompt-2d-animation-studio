@@ -45,3 +45,6 @@ Use GitHub Actions workflow_dispatch story_prompt, such as: Girl waves, picks up
     python slapstick-studio/studio.py render --story slapstick-studio/out/story_from_prompt.json
 
 The offline parser only recognizes the four authored actions and cannot invent new behaviors; it also recognizes a small set of Sinhala keywords.
+
+### Further optional tools
+The advanced optional GitHub workflow downloads Tahoma2D from its official release and attempts to install OpenToonz from a community Flathub package. Neither GUI app runs in the core CPU renderer. These app installations are temporary on GitHub runners.
