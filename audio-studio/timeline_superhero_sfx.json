@@ -1,0 +1,41 @@
+{
+  "fps": 30,
+  "duration": 9,
+  "events": [
+    {
+      "at": 0.35,
+      "type": "whoosh",
+      "gain": 0.23
+    },
+    {
+      "at": 1.6,
+      "type": "whoosh",
+      "gain": 0.38
+    },
+    {
+      "at": 3.83,
+      "type": "impact",
+      "gain": 0.5
+    },
+    {
+      "at": 5.6,
+      "type": "fart",
+      "gain": 0.57
+    },
+    {
+      "at": 6.55,
+      "type": "footstep",
+      "gain": 0.27
+    },
+    {
+      "at": 6.86,
+      "type": "footstep",
+      "gain": 0.27
+    },
+    {
+      "at": 7.14,
+      "type": "footstep",
+      "gain": 0.29
+    }
+  ]
+}

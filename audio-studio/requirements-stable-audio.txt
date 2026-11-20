@@ -1,0 +1,6 @@
+# GPU-only model environment (isolated from Kokoro and Applio dependencies).
+# Read Hugging Face Stability Community License and accept gated access first.
+torch>=2.4
+torchaudio
+einops>=0.8
+git+https://github.com/Stability-AI/stable-audio-tools.git
