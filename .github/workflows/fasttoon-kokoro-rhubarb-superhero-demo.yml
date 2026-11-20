@@ -1,0 +1,62 @@
+name: FastToon real Kokoro + Rhubarb superhero voice demo
+on:
+  push:
+    branches: [feature/fasttoon-kokoro-rvc-sfx-wan-hybrid-20261120]
+    paths: ['.github/workflows/fasttoon-kokoro-rhubarb-superhero-demo.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  render-dialogue-and-visemes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install real Kokoro CPU and independent lip-sync engine
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg espeak-ng unzip
+          python -m pip install -q --index-url https://download.pytorch.org/whl/cpu torch
+          python -m pip install -q -r audio-studio/requirements-kokoro.txt
+          curl -fLsS --retry 2 \
+            https://github.com/DanielSWolf/rhubarb-lip-sync/releases/download/v1.14.0/Rhubarb-Lip-Sync-1.14.0-Linux.zip \
+            -o /tmp/rhubarb_linux.zip
+          unzip -qo /tmp/rhubarb_linux.zip -d /tmp
+          chmod +x /tmp/Rhubarb-Lip-Sync-1.14.0-Linux/rhubarb
+      - name: Generate six scene voices with actual Rhubarb visemes
+        env:
+          CUDA_VISIBLE_DEVICES: ""
+        run: |
+          python audio-studio/demo_kokoro_rhubarb_scene.py \
+            --rhubarb /tmp/Rhubarb-Lip-Sync-1.14.0-Linux/rhubarb
+      - name: Verify FFmpeg can decode compressed speech
+        run: |
+          ffmpeg -v error -i audio-studio/outputs/kokoro_rhubarb_scene/FastToon_9s_Kokoro_Dialogue_Only.opus -f null -
+          python - <<'PY'
+          import json, pathlib
+          root=pathlib.Path('audio-studio/outputs/kokoro_rhubarb_scene')
+          d=json.loads((root/'FastToon_9s_Rhubarb_Aligned.json').read_text())
+          assert len(d['segments'])==6
+          assert all(len(x['cues'])>=2 for x in d['segments'])
+          assert (root/'FastToon_9s_Kokoro_Dialogue_Only.opus').stat().st_size>2500
+          print("DEMO_FORMAT_AND_CUE_PASS")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: FastToon-Superhero-Kokoro-Rhubarb-Actual-Generated
+          path: audio-studio/outputs/kokoro_rhubarb_scene/
+          retention-days: 30
+      - name: Commit ONLY compressed original TTS and derived phoneme data
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            audio-studio/outputs/kokoro_rhubarb_scene/FastToon_9s_Kokoro_Dialogue_Only.opus \
+            audio-studio/outputs/kokoro_rhubarb_scene/FastToon_9s_Rhubarb_Aligned.json
+          git commit -m "Export real CPU Kokoro/Rhubarb voices for V8 superhero lip sync" || true
+          git push origin "HEAD:feature/fasttoon-kokoro-rvc-sfx-wan-hybrid-20261120"
