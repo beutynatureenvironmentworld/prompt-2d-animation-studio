@@ -1,0 +1,46 @@
+name: Check Modal GitHub Authentication (No GPU)
+on:
+  push:
+    branches: [modal-toon-free-credit-pilot-20261120]
+    paths:
+      - '.github/workflows/modal-auth-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check-modal-secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+      MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+    steps:
+      - name: Check required secret names without exposing values
+        shell: bash
+        run: |
+          set -eu
+          if [ -z "${MODAL_TOKEN_ID:-}" ]; then
+            echo "MISSING_MODAL_TOKEN_ID"
+            exit 2
+          fi
+          if [ -z "${MODAL_TOKEN_SECRET:-}" ]; then
+            echo "MISSING_MODAL_TOKEN_SECRET"
+            exit 2
+          fi
+          echo "BOTH_MODAL_GITHUB_SECRETS_PRESENT"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Modal client (no compute)
+        run: python -m pip install --quiet --disable-pip-version-check modal
+      - name: Validate credentials against real Modal API without GPU or deployment
+        shell: bash
+        run: |
+          set -eu
+          if modal app list --limit 1 >/tmp/modal-auth-check.log 2>&1; then
+            echo "MODAL_AUTHENTICATION_SUCCESS"
+            echo "NO_MODAL_GPU_STARTED_NO_DEPLOYMENT"
+          else
+            echo "MODAL_AUTHENTICATION_FAILED_CHECK_TOKEN_VALUES_OR_WORKSPACE_ACCESS"
+            exit 1
+          fi
