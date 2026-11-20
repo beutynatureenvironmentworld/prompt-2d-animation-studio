@@ -1,0 +1,54 @@
+name: Modal Light-Faces Real GPU I2V Pilot (one bounded run)
+on:
+  push:
+    branches: [modal-toon-free-credit-pilot-20261120]
+    paths: ['.github/workflows/modal-lightfaces-gpu-once.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: modal-lightfaces-once
+  cancel-in-progress: false
+jobs:
+  render-one-original-video:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    env:
+      MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+      MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+      PROMPT: >-
+        Original colorful 2D cartoon slapstick kitchen. Left young man with light peach face
+        and thick eyebrows, dark swept hair, coral headphones, teal and cream striped sweater
+        sings like a superstar with fast expressive flowing hand gestures, confident smile,
+        quick head bobs, organic hip and shoulder weight shifts. On right the girl with light
+        golden peach face, brown double puff buns, yellow dress carries a tall white cake
+        and makes teasing side eyes, nearly laughs, takes an expressive side step and
+        tilts cake as she suppresses laughter. Character identities and outfits stay
+        perfectly unchanged, rubber-hose cartoon limb motion, dynamic physical acting,
+        fast funny beats and secondary motion, fixed original kitchen, crisp bold outlines.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: modal-toon-free-credit-pilot-20261120
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Require existing safe authenticated credentials
+        run: |
+          test -n "$MODAL_TOKEN_ID"
+          test -n "$MODAL_TOKEN_SECRET"
+          python -m pip install --quiet modal
+          echo "Credentials present; no values will be shown."
+      - name: One bounded L40S model inference (charges may consume accessible free credits)
+        shell: bash
+        run: |
+          mkdir -p modal-toon/outputs
+          timeout 860s modal run modal-toon/pilot.py --image-path modal-toon/lightfaces_two_characters_kitchen.png --prompt "$PROMPT" --output modal-toon/outputs/Modal_LightFaces_LTX_Real_GPU_Pilot.mp4
+          test -s modal-toon/outputs/Modal_LightFaces_LTX_Real_GPU_Pilot.mp4
+          ffprobe -v error -show_entries format=duration,size:stream=codec_name,codec_type,width,height -of json modal-toon/outputs/Modal_LightFaces_LTX_Real_GPU_Pilot.mp4
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: FastToon-Modal-RealGPU-LightFaces-Test
+          path: modal-toon/outputs/Modal_LightFaces_LTX_Real_GPU_Pilot.mp4
+          retention-days: 7
