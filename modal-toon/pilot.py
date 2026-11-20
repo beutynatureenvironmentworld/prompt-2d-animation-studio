@@ -37,7 +37,7 @@ NEGATIVE = (
     "changing clothes, morphing faces, extra limbs, duplicate pupils, "
     "unwanted camera pan, photoreal, 3D rendering, text, watermarks"
 )
-WIDTH, HEIGHT = 384, 672
+WIDTH, HEIGHT = 512, 288
 FRAMES, FPS = 49, 24
 STEPS = 20
 
@@ -84,8 +84,8 @@ class SlapstickVideo:
             num_frames=FRAMES,
             num_inference_steps=STEPS,
             guidance_scale=4.5,
-            decode_timestep=0.05,
-            image_cond_noise_scale=0.025,
+            decode_timestep=0.03,
+            image_cond_noise_scale=0.08,
             generator=g,
         ).frames[0]
         path = Path("/tmp/modal_toon_pilot.mp4")
