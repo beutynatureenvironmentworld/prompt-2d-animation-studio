@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 704 396" width="704" height="396">
+<rect width="704" height="396" fill="#fffaf2"/>
+<ellipse cx="157" cy="358" rx="96" ry="6" fill="#e7dfd7" opacity=".50"/>
+<ellipse cx="524" cy="358" rx="103" ry="6" fill="#e7dfd7" opacity=".50"/>
+<!-- Singer boy: clear stick-like anatomy, user-reference inspired simple bold outlines -->
+<g stroke="#16141a" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M149 277 Q139 320 111 348 L98 367" fill="none" stroke-width="7"/>
+  <path d="M184 273 Q202 310 207 363 L227 364" fill="none" stroke-width="7"/>
+  <path d="M112 349 L98 367 117 368" fill="none" stroke-width="6"/>
+  <path d="M206 363 L229 363" fill="none" stroke-width="6"/>
+  <path d="M133 206 L120 281 Q155 295 195 279 L180 205 Z" fill="#345dc7" stroke-width="5"/>
+  <path d="M145 226 Q116 230 98 246 L78 235" fill="none" stroke-width="8"/>
+  <path d="M145 226 Q116 230 98 246 L78 235" fill="none" stroke="#a56645" stroke-width="5"/>
+  <path d="M174 221 Q194 230 213 248 L239 233" fill="none" stroke-width="9"/>
+  <path d="M174 221 Q194 230 213 248 L239 233" fill="none" stroke="#a56645" stroke-width="5"/>
+  <path d="M79 235 Q71 227 67 239" fill="none" stroke-width="6"/>
+  <path d="M238 233 Q251 229 248 245" fill="none" stroke-width="6"/>
+  <ellipse cx="158" cy="154" rx="61" ry="66" fill="#ad6e4e" stroke-width="6"/>
+  <path d="M98 130 Q107 89 172 91 Q201 90 219 115 Q179 128 99 150" fill="#242329" stroke-width="6"/>
+  <path d="M119 104 Q101 120 81 135 Q70 150 88 153 Q114 150 134 131" fill="#25252a" stroke-width="5"/>
+  <path d="M131 105 Q156 52 210 77 Q230 97 220 128 Q176 143 126 121" fill="#29292c" stroke-width="5"/>
+  <path d="M133 148 Q140 139 153 142" fill="none" stroke-width="4"/>
+  <path d="M174 143 Q189 137 197 150" fill="none" stroke-width="4"/>
+  <ellipse cx="145" cy="164" rx="21" ry="23" fill="#fff" stroke-width="4"/>
+  <ellipse cx="189" cy="166" rx="21" ry="23" fill="#fff" stroke-width="4"/>
+  <ellipse cx="151" cy="166" rx="7" ry="10" fill="#17151b" stroke="none"/>
+  <ellipse cx="188" cy="168" rx="7" ry="10" fill="#17151b" stroke="none"/>
+  <circle cx="153" cy="163" r="2.5" fill="#fff" stroke="none"/>
+  <circle cx="190" cy="165" r="2.5" fill="#fff" stroke="none"/>
+  <path d="M143 199 Q164 188 194 199 L190 222 Q159 240 141 213Z" fill="#611b2b" stroke-width="4"/>
+  <path d="M147 200 Q166 194 193 200 L188 208 Q165 207 147 205Z" fill="#fff" stroke-width="1.5"/>
+  <ellipse cx="167" cy="219" rx="19" ry="9" fill="#e27a85" stroke="none"/>
+  <g transform="translate(244 220) rotate(-20)">
+    <rect x="-9" y="5" width="18" height="52" rx="6" fill="#36313a" stroke-width="4"/>
+    <ellipse cx="0" cy="0" rx="18" ry="17" fill="#d44f63" stroke-width="4"/>
+    <ellipse cx="-4" cy="-3" rx="8" ry="8" fill="#f07e84" opacity=".35" stroke="none"/>
+  </g>
+</g>
+<!-- Prank girl: identical essential puff-bun/teal dress/stick leg silhouette, LIGHTER skin -->
+<g stroke="#16151a" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M509 263 Q494 314 481 350" fill="none" stroke-width="7"/>
+  <path d="M540 267 Q555 289 576 306 Q584 317 576 329" fill="none" stroke-width="7"/>
+  <path d="M475 342 Q470 351 459 356 Q467 373 482 362 L492 350" fill="#0c9ea6" stroke-width="5"/>
+  <path d="M568 328 Q576 330 581 342 L590 352 Q596 365 583 360 L564 347Z" fill="#089ba1" stroke-width="5"/>
+  <path d="M484 208 Q469 221 443 232 L421 216" fill="none" stroke-width="8"/>
+  <path d="M484 208 Q469 221 443 232 L421 216" fill="none" stroke="#f3c7ab" stroke-width="5"/>
+  <path d="M534 213 Q562 226 588 202" fill="none" stroke-width="8"/>
+  <path d="M534 213 Q562 226 588 202" fill="none" stroke="#f3c7ab" stroke-width="5"/>
+  <path d="M423 213 Q417 204 412 218" fill="none" stroke="#f3c7ab" stroke-width="6"/>
+  <path d="M587 201 Q586 189 595 192 L604 200 Q598 214 588 212Z" fill="#f3c7ab" stroke-width="4"/>
+  <path d="M502 203 Q517 203 534 204 Q532 233 566 275 Q524 296 477 264 Q503 243 502 203Z" fill="#16b5c3" stroke-width="5"/>
+  <path d="M499 208 Q516 213 532 208" fill="none" stroke-width="3"/>
+  <circle cx="455" cy="126" r="34" fill="#5d372a" stroke-width="5"/>
+  <circle cx="575" cy="126" r="33" fill="#5d372a" stroke-width="5"/>
+  <circle cx="444" cy="113" r="19" fill="#5d372a" stroke-width="0"/>
+  <circle cx="468" cy="106" r="20" fill="#5d372a" stroke-width="0"/>
+  <circle cx="566" cy="113" r="20" fill="#5d372a" stroke-width="0"/>
+  <circle cx="586" cy="112" r="18" fill="#5d372a" stroke-width="0"/>
+  <ellipse cx="515" cy="166" rx="56" ry="56" fill="#f3c7ab" stroke-width="6"/>
+  <path d="M464 155 Q463 108 516 110 Q553 110 567 153 Q542 140 535 119 Q519 147 493 132 Q482 150 464 155Z" fill="#563027" stroke-width="5"/>
+  <path d="M475 145 L474 152" stroke="#f8dc38" stroke-width="8"/>
+  <path d="M552 145 L554 152" stroke="#f8dc38" stroke-width="8"/>
+  <path d="M478 163 Q490 156 500 161" fill="none" stroke-width="5"/>
+  <ellipse cx="489" cy="171" rx="20" ry="21" fill="#fff" stroke-width="4"/>
+  <ellipse cx="483" cy="172" rx="7" ry="9" fill="#151515" stroke="none"/>
+  <circle cx="481" cy="170" r="2" fill="#fff" stroke="none"/>
+  <path d="M529 171 Q545 155 553 173" fill="none" stroke-width="5"/>
+  <path d="M527 172 L535 178 M544 170 L554 171" fill="none" stroke-width="3.5"/>
+  <path d="M501 193 Q526 210 541 192" fill="none" stroke-width="4.2"/>
+  <path d="M500 142 Q510 138 518 143" fill="none" stroke-width="4.7"/>
+  <path d="M534 141 Q547 138 555 143" fill="none" stroke-width="4.7"/>
+</g>
+</svg>
