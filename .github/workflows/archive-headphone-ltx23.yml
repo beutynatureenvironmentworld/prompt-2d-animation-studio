@@ -1,0 +1,30 @@
+name: Archive Actual LTX 2.3 ZeroGPU Headphone Clip
+on:
+  push:
+    branches: [comfy-headphone-wan22-kaggle-20261120]
+    paths: [.github/workflows/archive-headphone-ltx23.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preserve-generated-clip:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Download real LTX 2.3 ZeroGPU generation and verify tracks
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p demo
+          curl --fail --location --silent --show-error --retry 2 --max-time 120 \
+            'https://lightricks-ltx-2-3.hf.space/gradio_api/file=/tmp/gradio/5173c4dc23fca66ee2c603a3288a430a5f3110d1e82440930f16cbce6463db26/tmpf4m77w7f.mp4' \
+            -o demo/Headphone_LTX23_ZeroGPU_Real_AI_Demo.mp4
+          test "$(stat -c%s demo/Headphone_LTX23_ZeroGPU_Real_AI_Demo.mp4)" -gt 10000
+          ffprobe -v error -show_entries format=duration,size:stream=codec_type,codec_name,width,height -of json demo/Headphone_LTX23_ZeroGPU_Real_AI_Demo.mp4 | tee demo/ffprobe.json
+          ffmpeg -hide_banner -loglevel error -y -i demo/Headphone_LTX23_ZeroGPU_Real_AI_Demo.mp4 -vf 'fps=2,scale=320:-2,tile=2x2' -frames:v 1 demo/contact_sheet.jpg
+          sha256sum demo/Headphone_LTX23_ZeroGPU_Real_AI_Demo.mp4 | tee demo/sha256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-headphone-ltx23-ai-video
+          path: demo/
+          retention-days: 30
