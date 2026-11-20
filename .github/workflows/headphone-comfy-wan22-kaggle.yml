@@ -1,0 +1,65 @@
+name: Headphone ComfyUI Wan22 Kaggle One-Shot
+on:
+  push:
+    branches:
+      - comfy-headphone-wan22-kaggle-20261120
+    paths:
+      - .github/workflows/headphone-comfy-wan22-kaggle.yml
+      - headphone-comfy-demo/**
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  submit-private-gpu-job:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Locally validate and render first ComfyUI keyframe
+        run: |
+          python -m pip install --quiet Pillow
+          mkdir -p /tmp/headphone-preflight
+          cd /tmp/headphone-preflight
+          COMFY_DRY_RUN=1 python "$GITHUB_WORKSPACE/headphone-comfy-demo/kaggle_job.py" --preflight
+          python -m json.tool headphone_comfy_api.json > /dev/null
+          test -s headphone_start.png
+      - name: Check private Kaggle credentials
+        id: kaggle
+        shell: bash
+        run: |
+          if [ -z "$KAGGLE_API_TOKEN" ] || [ -z "$KAGGLE_USERNAME" ]; then
+            echo "KAGGLE_CREDENTIALS_MISSING: no GPU submission. Set repository secret KAGGLE_API_TOKEN and variable KAGGLE_USERNAME."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Submit real ComfyUI Wan 2.2 5B GPU job to private Kaggle kernel
+        if: steps.kaggle.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          python -m pip install --quiet kaggle
+          mkdir -p /tmp/headphone-kaggle
+          cp headphone-comfy-demo/kaggle_job.py /tmp/headphone-kaggle/
+          python - <<'PY'
+          import json,os,pathlib,re
+          user=os.environ.get('KAGGLE_USERNAME','')
+          if not re.fullmatch(r'[A-Za-z0-9_-]{2,64}',user):raise ValueError('Invalid Kaggle username')
+          metadata={'id':user+'/headphone-comfy-wan22-one-shot-20261120',
+            'title':'Headphone Comedy Real Wan 2.2 ComfyUI GPU One Shot',
+            'code_file':'kaggle_job.py','language':'python','kernel_type':'script',
+            'is_private':True,'enable_gpu':True,'machine_shape':'NvidiaTeslaT4',
+            'enable_internet':True,'dataset_sources':[],'competition_sources':[],
+            'kernel_sources':[],'model_sources':[]}
+          pathlib.Path('/tmp/headphone-kaggle/kernel-metadata.json').write_text(json.dumps(metadata,indent=2))
+          print('PRIVATE_JOB',metadata['id'])
+          PY
+          kaggle kernels push -p /tmp/headphone-kaggle --timeout 3000 --accelerator NvidiaTeslaT4
+          echo "Kaggle accepted the submission; model generation may still fail or be queued."
+          echo "Kernel URL: https://www.kaggle.com/code/$KAGGLE_USERNAME/headphone-comfy-wan22-one-shot-20261120"
+          kaggle kernels status "$KAGGLE_USERNAME/headphone-comfy-wan22-one-shot-20261120" || true
