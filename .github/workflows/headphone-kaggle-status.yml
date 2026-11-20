@@ -1,0 +1,39 @@
+name: Check Headphone ComfyUI Kaggle GPU Output
+on:
+  push:
+    branches: [comfy-headphone-wan22-kaggle-20261120]
+    paths: [.github/workflows/headphone-kaggle-status.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  status:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Query private Kaggle kernel and collect output only if already complete
+        shell: bash
+        run: |
+          python -m pip install --quiet kaggle six
+          KERNEL="gamagekasun/headphone-comedy-real-wan-2-2-comfyui-gpu-one-shot"
+          echo "CHECKING_KAGGLE_KERNEL: $KERNEL"
+          kaggle kernels status "$KERNEL" | tee /tmp/kaggle_status.txt || true
+          if grep -Eiq "complete|success" /tmp/kaggle_status.txt; then
+            mkdir -p /tmp/comfy_gpu_output
+            kaggle kernels output "$KERNEL" -p /tmp/comfy_gpu_output || true
+            find /tmp/comfy_gpu_output -maxdepth 2 -type f -printf '%f %s bytes\n' | head -30
+          else
+            echo "GENERATION_NOT_CONFIRMED_COMPLETE: no MP4 artifact can be claimed."
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: headphone-kaggle-comfy-gpu-outputs-if-ready
+          path: /tmp/comfy_gpu_output/
+          if-no-files-found: ignore
+          retention-days: 7
