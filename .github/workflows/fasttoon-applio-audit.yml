@@ -1,0 +1,33 @@
+name: FastToon Applio RVC official source and opt-in install
+on:
+  push:
+    branches: [feature/fasttoon-kokoro-rvc-sfx-wan-hybrid-20261120]
+    paths: ['.github/workflows/fasttoon-applio-audit.yml']
+  workflow_dispatch:
+    inputs:
+      full_install:
+        description: 'Install heavy full Applio/RVC dependencies?'
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  validate-applio:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Clone and verify official Applio source
+        run: |
+          bash audio-studio/install_applio.sh --source-only
+          test -f third_party/Applio/run-install.sh
+          test -f third_party/Applio/run-applio.sh
+      - name: Install full RVC engine dependencies (manual opt-in only)
+        if: inputs.full_install == true
+        run: |
+          bash audio-studio/install_applio.sh --full
+          echo 'Installer success does not establish that a licensed RVC voice model was installed.'

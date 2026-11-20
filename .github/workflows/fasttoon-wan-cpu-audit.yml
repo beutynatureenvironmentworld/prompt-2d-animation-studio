@@ -1,0 +1,18 @@
+name: FastToon Wan2.2 CPU feasibility check
+on:
+  push:
+    branches: [feature/fasttoon-kokoro-rvc-sfx-wan-hybrid-20261120]
+    paths: ['.github/workflows/fasttoon-wan-cpu-audit.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python audio-studio/wan_gpu_gate.py --audit
