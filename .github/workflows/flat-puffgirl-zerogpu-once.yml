@@ -1,0 +1,58 @@
+name: Wan2.2 and LTX2.3 Free GPU Flat Puff-Girl Video Test
+on:
+  push:
+    branches: [modal-toon-free-credit-pilot-20261120]
+    paths:
+      - '.github/workflows/flat-puffgirl-zerogpu-once.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install small CPU preprocessing tools
+        run: |
+          python -m pip install --quiet Pillow cairosvg requests
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Produce exact simple original flat starting frame from SVG
+        run: |
+          mkdir -p modal-toon/outputs
+          python - <<'PY'
+          import cairosvg
+          from PIL import Image
+          path='modal-toon/outputs/flat_2d_puffgirl_start.png'
+          cairosvg.svg2png(url='modal-toon/reference_flat_puffgirl.svg',
+              write_to=path,output_width=512,output_height=288)
+          image=Image.open(path)
+          print('START_POSE',image.size,image.mode)
+          PY
+      - name: Try once each real Wan 2.2 and LTX 2.3 community GPU (no paid billing)
+        run: python -u modal-toon/free_gpu_motion.py
+      - name: Upload audit and any actual generated video files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flat-puffgirl-Wan-LTX-actual-GPU-attempt
+          path: modal-toon/outputs/
+          retention-days: 14
+      - name: Commit real verified MP4 results for direct download
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          vids=(modal-toon/outputs/Flat2D_PuffGirl_Real_*_GPU.mp4)
+          if [ ${#vids[@]} -eq 0 ]; then
+            echo 'NO_GPU_MP4_AVAILABLE: model providers rejected or failed this request'
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add modal-toon/outputs/
+          git commit -m "Add genuine Wan or LTX ZeroGPU flat-2D puff girl animation clips"
+          git push origin "HEAD:modal-toon-free-credit-pilot-20261120"
