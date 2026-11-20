@@ -1,0 +1,23 @@
+name: Modal Low-cost T4 GPU Access Probe No Model
+on:
+  push:
+    branches: [modal-toon-free-credit-pilot-20261120]
+    paths: ['.github/workflows/modal-t4-access-probe.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check-access:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+      MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --quiet modal
+      - name: Ask Modal for one T4 GPU for at most 30 seconds
+        run: modal run modal-toon/t4_access_probe.py
