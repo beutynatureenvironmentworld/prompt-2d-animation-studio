@@ -43,7 +43,7 @@ jobs:
         if: steps.kaggle.outputs.enabled == 'true'
         shell: bash
         run: |
-          python -m pip install --quiet kaggle
+          python -m pip install --quiet kaggle six
           mkdir -p /tmp/headphone-kaggle
           cp headphone-comfy-demo/kaggle_job.py /tmp/headphone-kaggle/
           python - <<'PY'
