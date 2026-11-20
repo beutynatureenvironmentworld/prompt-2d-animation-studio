@@ -45,7 +45,7 @@ STEPS = 20
     image=runtime,
     gpu="L40S",
     volumes={"/cache": cache},
-    scaledown_window=0,
+    scaledown_window=2,
     max_containers=1,
     timeout=600,
 )
