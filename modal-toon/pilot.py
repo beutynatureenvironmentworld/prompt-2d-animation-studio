@@ -10,21 +10,22 @@ import modal
 
 APP_NAME = "funny-toon-modal-credit-pilot"
 MODEL_ID = "Lightricks/LTX-Video"
+MODEL_REVISION = "a6d59ee37c13c58261aa79027d3e41cd41960925"
 app = modal.App(APP_NAME)
 
 runtime = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install("ffmpeg")
     .pip_install(
-        "torch==2.7.0",
-        "diffusers==0.33.1",
-        "transformers==4.51.3",
-        "accelerate==1.6.0",
+        "torch==2.6.0",
+        "diffusers==0.32.2",
+        "transformers==4.49.0",
+        "accelerate==1.4.0",
         "huggingface-hub==0.36.0",
         "sentencepiece==0.2.0",
-        "Pillow>=11,<13",
+        "Pillow==11.1.0",
         "imageio==2.37.0",
-        "imageio-ffmpeg==0.5.1",
+        "imageio-ffmpeg==0.6.0",
     )
     .env({"HF_HOME": "/cache/huggingface"})
 )
@@ -38,7 +39,7 @@ NEGATIVE = (
 )
 WIDTH, HEIGHT = 384, 672
 FRAMES, FPS = 49, 24
-STEPS = 16
+STEPS = 20
 
 @app.cls(
     image=runtime,
@@ -46,7 +47,7 @@ STEPS = 16
     volumes={"/cache": cache},
     scaledown_window=0,
     max_containers=1,
-    timeout=900,
+    timeout=600,
 )
 class SlapstickVideo:
     @modal.enter()
@@ -54,7 +55,7 @@ class SlapstickVideo:
         import torch
         from diffusers import LTXImageToVideoPipeline
         self.pipe = LTXImageToVideoPipeline.from_pretrained(
-            MODEL_ID, torch_dtype=torch.bfloat16
+            MODEL_ID, revision=MODEL_REVISION, torch_dtype=torch.bfloat16
         )
         self.pipe.to("cuda")
         cache.commit()
