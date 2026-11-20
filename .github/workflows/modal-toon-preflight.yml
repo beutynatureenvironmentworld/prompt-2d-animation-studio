@@ -1,0 +1,23 @@
+name: Modal Toon safe source preflight (no GPU)
+on:
+  push:
+    branches: [modal-toon-free-credit-pilot-20261120]
+    paths:
+      - 'modal-toon/**'
+      - '.github/workflows/modal-toon-preflight.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate source without importing Modal, downloading checkpoints or using credits
+        run: |
+          python -m py_compile modal-toon/pilot.py
+          test -s modal-toon/README.md
+          echo 'SOURCE_PREFLIGHT_OK; NO_MODAL_GPU_USED; NO_MODAL_DEPLOYMENT'
