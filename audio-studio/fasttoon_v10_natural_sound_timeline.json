@@ -1,0 +1,75 @@
+{
+  "version": "V10",
+  "sample_rate": 48000,
+  "source_visual": "V9 Kokoro Rhubarb unchanged 270 frames",
+  "headphones_default": false,
+  "cape_default": false,
+  "lip_sync": "Existing V9 Kokoro voice + 52 Rhubarb cues preserved",
+  "action_sfx": [
+    {
+      "at": 0,
+      "type": "outdoor_air",
+      "duration": 9,
+      "origin": "Original DSP light wind",
+      "trigger": "scene.outdoor"
+    },
+    {
+      "at": 0.74,
+      "type": "wind_burst",
+      "duration": 0.58,
+      "origin": "Original DSP",
+      "trigger": "girl.fall"
+    },
+    {
+      "at": 1.2,
+      "type": "flight_wind",
+      "duration": 2.38,
+      "origin": "Original DSP",
+      "trigger": "boy.flight_start"
+    },
+    {
+      "at": 3.93,
+      "type": "landing_impact",
+      "duration": 0.42,
+      "origin": "Original DSP",
+      "trigger": "both.landing"
+    },
+    {
+      "at": 4,
+      "type": "real_laughter",
+      "duration": 1.057,
+      "origin": "Public domain real recording",
+      "license": "Public domain",
+      "author": "ezwa",
+      "source": "https://commons.wikimedia.org/wiki/File:Bursting_out_laughing.ogg",
+      "trigger": "girl.giggle"
+    },
+    {
+      "at": 5.8,
+      "type": "comedic_fart",
+      "duration": 0.59,
+      "origin": "Original DSP",
+      "trigger": "boy.fart"
+    },
+    {
+      "at": 6.18,
+      "type": "breath_gasp",
+      "duration": 0.175,
+      "origin": "Original DSP",
+      "trigger": "girl.disgust"
+    },
+    {
+      "at": 7.16,
+      "type": "footsteps",
+      "times": [
+        7.16,
+        7.42,
+        7.69,
+        7.96
+      ],
+      "origin": "Original DSP",
+      "trigger": "girl.run"
+    }
+  ],
+  "notes": "Do NOT claim Stable Audio Open/RVC neural effects used. Both were not run. SFX only fired per visual event; V9 voice/lipsync retained."
+}
