@@ -1,4 +1,5 @@
 name: One-shot Modal LTX Flat 2D Puff-Girl GPU Demo
+# Re-run after Modal SDK scaledown_window minimum correction
 on:
   push:
     branches: [modal-toon-free-credit-pilot-20261120]
