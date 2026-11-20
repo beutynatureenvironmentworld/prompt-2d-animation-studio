@@ -1,4 +1,5 @@
 name: Check Headphone ComfyUI Kaggle GPU Output
+# Manual result check after initial ZeroGPU trial
 on:
   push:
     branches: [comfy-headphone-wan22-kaggle-20261120]
