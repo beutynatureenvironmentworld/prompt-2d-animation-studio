@@ -1,0 +1,62 @@
+name: One-shot Modal LTX Flat 2D Puff-Girl GPU Demo
+on:
+  push:
+    branches: [modal-toon-free-credit-pilot-20261120]
+    paths: ['.github/workflows/modal-flat-puffgirl-gpu-once.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  generate-one-shot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+      MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify Modal credentials exist without exposing values
+        run: |
+          test -n "$MODAL_TOKEN_ID"
+          test -n "$MODAL_TOKEN_SECRET"
+      - name: Generate simple flat-2D reference PNG from original SVG (no GPU)
+        run: |
+          python -m pip install -q cairosvg modal
+          mkdir -p modal-toon/outputs
+          python - <<'PY'
+          import cairosvg
+          cairosvg.svg2png(url='modal-toon/reference_flat_puffgirl.svg',
+              write_to='modal-toon/outputs/flat_2d_puffgirl_start.png',
+              output_width=512,output_height=288)
+          from PIL import Image
+          im=Image.open('modal-toon/outputs/flat_2d_puffgirl_start.png')
+          print('START_FRAME_CHECK', im.size, im.mode)
+          PY
+      - name: Generate 2-second REAL GPU LTX image-to-video test on Modal (one limited job)
+        shell: bash
+        run: |
+          modal run modal-toon/pilot.py \
+            --image-path modal-toon/outputs/flat_2d_puffgirl_start.png \
+            --prompt "Original very simple hand drawn 2D slapstick cartoon. Two consistent cartoon characters on a flat ivory background. On the left, a brown skinned boy in a sideways dark cap and a blue shirt SINGS confidently into a small red microphone with his eyes wide and mouth changing, vigorously bobs his head and SWINGS his arms and leans his torso rhythmically. On the right, the EXACT SAME lighter peach skinned girl with two huge dark-brown hair puff buns, large cartoon eyes with one eye winking, thin stick legs and arms, and a plain turquoise dress, dances quickly side to side, lifting one foot and pumping both arms enthusiastically. Fast energetic organic squash-and-stretch natural joint movement, black ink contours, flat 2D cel shapes, bright solid colors, zero shadows, no 3D, stable same designs and skin tones, no morphing, full body two shot, locked camera. A joyful lively cartoon motion test." \
+            --output modal-toon/outputs/Flat2D_PuffGirl_Modal_LTX_GPU_Demo.mp4
+          test -s modal-toon/outputs/Flat2D_PuffGirl_Modal_LTX_GPU_Demo.mp4
+          file modal-toon/outputs/Flat2D_PuffGirl_Modal_LTX_GPU_Demo.mp4
+          stat -c 'GENERATED_MP4_BYTES %s' modal-toon/outputs/Flat2D_PuffGirl_Modal_LTX_GPU_Demo.mp4
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: flat-2d-puffgirl-modal-ltx-gpu
+          path: modal-toon/outputs/
+          retention-days: 30
+      - name: Commit generated GPU MP4 to testing branch for direct download
+        if: success()
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add modal-toon/outputs/flat_2d_puffgirl_start.png modal-toon/outputs/Flat2D_PuffGirl_Modal_LTX_GPU_Demo.mp4
+          git commit -m "Add first actual Modal GPU LTX flat-2D puff-bun girl motion demo" || true
+          git push origin "HEAD:modal-toon-free-credit-pilot-20261120"
