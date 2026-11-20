@@ -1,0 +1,105 @@
+{
+  "title": "FastToon V11 — Frame-Grounded Cartoon Audio",
+  "scene": "Superhero rescue / embarrassed fart",
+  "fps": 30,
+  "duration_seconds": 9,
+  "characters": {
+    "boy": {
+      "headphones_default": false,
+      "superhero_cape_scene_specific": true
+    },
+    "girl": {
+      "dress": "pink",
+      "puff_buns": true
+    }
+  },
+  "audio_policy": {
+    "voice_engine": "Kokoro 82M, existing scene source",
+    "lipsync": "Existing Rhubarb 52 cues in V9/V10 frames",
+    "mix": "FFmpeg AAC, NumPy/SciPy DSP Foley",
+    "laughing": "omitted: no clear visual laugh beat",
+    "outro": "Oh no shout muted, shy sigh retained"
+  },
+  "events": [
+    {
+      "type": "outdoor_airy_wind",
+      "start": 0,
+      "end": 9,
+      "level": "very soft"
+    },
+    {
+      "type": "fall_whoosh",
+      "start": 1.6,
+      "duration": 0.6,
+      "pan": 0.55
+    },
+    {
+      "type": "superhero_dive",
+      "start": 2.03,
+      "duration": 1.28,
+      "pan": -0.43
+    },
+    {
+      "type": "rescue_air",
+      "start": 2.83,
+      "duration": 0.36
+    },
+    {
+      "type": "flight_followthrough",
+      "start": 3.15,
+      "duration": 1.33,
+      "pan": 0.48
+    },
+    {
+      "type": "soft_landing_impact",
+      "start": 4.77,
+      "duration": 0.37
+    },
+    {
+      "type": "shoe_scuff",
+      "start": 4.97,
+      "duration": 0.16
+    },
+    {
+      "type": "short_irregular_cartoon_fart",
+      "start": 5.69,
+      "duration": 0.39
+    },
+    {
+      "type": "girl_disgust_inhale",
+      "start": 6.16,
+      "duration": 0.22
+    },
+    {
+      "type": "run_footstep",
+      "start": 6.84,
+      "duration": 0.17
+    },
+    {
+      "type": "run_footstep",
+      "start": 7.1,
+      "duration": 0.17
+    },
+    {
+      "type": "run_footstep",
+      "start": 7.36,
+      "duration": 0.17
+    },
+    {
+      "type": "run_footstep",
+      "start": 7.62,
+      "duration": 0.17
+    },
+    {
+      "type": "boy_embarrassed_sigh",
+      "start": 8.13,
+      "duration": 0.42
+    }
+  ],
+  "model_trials": {
+    "stable_audio_3_hf_space": "ZeroGPU quota exceeded, no SFX rendered",
+    "bark_hf_space": "ZeroGPU quota exceeded, no SFX rendered",
+    "wan_2_2": "Not a stand-alone SFX generator; no standalone audio inference done"
+  },
+  "provenance": "V11 is original deterministic open-source NumPy/SciPy sound synthesis. Stable Audio/Bark output not present."
+}
