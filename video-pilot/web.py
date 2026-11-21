@@ -15,3 +15,7 @@ def studio():
 @app.get("/policy", include_in_schema=False)
 def policy():
     return FileResponse(Path(__file__).with_name("policy.html"), headers={"Cache-Control": "no-cache"})
+
+
+from previews import router as preview_router
+app.include_router(preview_router)

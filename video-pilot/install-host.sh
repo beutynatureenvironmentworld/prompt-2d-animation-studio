@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 base=/opt/vidbest-video-pilot
 getent passwd vidbest-pilot >/dev/null || useradd --system --home /var/lib/vidbest-video-pilot --shell /usr/sbin/nologin vidbest-pilot
 install -d -m755 "$base/app" /etc/vidbest-video-pilot
-install -m644 backend.py web.py policy.html index.html "$base/app/"
+install -m644 backend.py previews.py web.py policy.html index.html "$base/app/"
 for job in api worker; do
   if [[ $job == api ]]; then
     cmd="$base/venv/bin/uvicorn web:app --host 127.0.0.1 --port 8193 --no-access-log --no-proxy-headers"
@@ -46,8 +46,13 @@ OnUnitInactiveSec=2min
 [Install]
 WantedBy=timers.target
 UNIT
+sed -e 's/^Description=.*/Description=Render free video previews/' \
+    -e 's/backend.py worker$/previews.py/' /etc/systemd/system/vidbest-video-worker.service > /etc/systemd/system/vidbest-video-preview.service
 systemctl daemon-reload
+systemctl enable --now vidbest-video-preview.service
+systemctl restart vidbest-video-preview.service
 systemctl enable --now vidbest-video-archive.timer
 systemctl enable --now vidbest-video-api.service vidbest-video-worker.service
 systemctl restart vidbest-video-api.service vidbest-video-worker.service
+
 
