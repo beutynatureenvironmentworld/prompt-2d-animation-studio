@@ -6,7 +6,6 @@ import secrets
 import shutil
 import subprocess
 import time
-from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -34,6 +33,14 @@ class Spec(BaseModel):
 
 def failure(status, message, wait=None):
     raise HTTPException(status, message, headers={"Retry-After": str(wait)} if wait else None)
+
+
+@router.get("/api/preview-availability")
+def availability():
+    with db() as con:
+        used = con.execute("SELECT used FROM preview_budget WHERE id=1").fetchone()[0]
+    return JSONResponse({"available": used < int(os.getenv("PREVIEW_TOTAL_CALLS", "0"))},
+                        headers={"Cache-Control":"no-store"})
 
 
 @router.post("/api/previews")

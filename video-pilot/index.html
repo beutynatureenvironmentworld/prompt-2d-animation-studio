@@ -33,7 +33,7 @@
 <div class="summary"><p class="small">The illustration shows your framing. Generate a one-second motion clip and a still from your own scene before paying. Up to three previews per hour, subject to free GPU availability.</p>
 <button class="pay" type="button" id="generatePreview">Generate free preview</button>
 <p id="previewStatus" role="status" class="small"></p>
-<div id="previewMedia" hidden><video id="motion" controls playsinline preload="metadata" style="width:100%;max-height:320px"></video><a id="still" target="_blank" rel="noopener">Open generated still</a></div></div>
+<div id="previewMedia" hidden><video id="motion" controls playsinline preload="metadata" style="width:100%;max-height:320px"></video><a id="still" target="_blank" rel="noopener"><img id="stillImage" alt="Generated frame from your scene" style="display:block;max-width:100%;max-height:180px;margin:12px 0">Open full-size still</a></div></div>
 <div class="summary"><div class="line"><h2>Estimated price</h2><output id="price" class="price">—</output></div>
 <label class="wide">Delivery email (required)<input type="email" name="email" autocomplete="email" required maxlength="254"></label>
 <p class="small">We’ll send your private video link here. For your first order, try a short, low-cost clip to check the result.</p>
@@ -113,16 +113,29 @@ form.addEventListener('submit',async e=>{
 });
 update();
 
-let previewRevision = 0;
+let previewRevision = 0, previewAvailable = false;
+async function checkPreviewAvailability(){
+  try{
+    const response = await fetch('/api/preview-availability',{cache:'no-store'});
+    if(!response.ok)return;
+    previewAvailable = (await response.json()).available;
+    if(!previewRevision || !get('motion').hasAttribute('src') && get('generatePreview').disabled){
+      get('generatePreview').disabled = !previewAvailable;
+      get('previewStatus').textContent = previewAvailable?'':'Free motion previews are currently unavailable.';
+    }
+  }catch{}
+}
+get('generatePreview').disabled=true;
+checkPreviewAvailability();
 function clearPreview(){
   previewRevision++;
-  get('generatePreview').disabled=false;
+  get('generatePreview').disabled=!previewAvailable;
   get('previewMedia').hidden=true;
   get('motion').pause();
   get('motion').removeAttribute('src');
   get('motion').removeAttribute('poster');
   get('motion').load();
-  get('previewStatus').textContent='';
+  get('previewStatus').textContent=previewAvailable?'':'Free motion previews are currently unavailable.';
 }
 form.addEventListener('input',e=>{if(['prompt','style','ratio'].includes(e.target.name))clearPreview();});
 get('generatePreview').addEventListener('click',async()=>{
@@ -148,7 +161,7 @@ get('generatePreview').addEventListener('click',async()=>{
       if(version!==previewRevision)return;
       if(job.state==='ready'){
         get('motion').src=url+'/motion.mp4';get('motion').poster=url+'/frame.jpg';
-        get('still').href=url+'/frame.jpg';get('previewMedia').hidden=false;
+        get('still').href=url+'/frame.jpg';get('stillImage').src=get('still').href;get('previewMedia').hidden=false;
         get('previewStatus').textContent='Your one-second preview is ready. '+result.remaining+' previews remaining in this hourly window.';
         return;
       }
