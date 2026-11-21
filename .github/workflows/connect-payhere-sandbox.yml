@@ -1,6 +1,9 @@
 name: Connect PayHere Sandbox
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/connect-payhere-sandbox.yml']
 permissions:
   contents: write
 concurrency:
