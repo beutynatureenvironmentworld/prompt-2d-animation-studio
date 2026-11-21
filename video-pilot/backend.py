@@ -31,7 +31,10 @@ BASE = os.getenv("BASE_URL", "https://ai.vid.best").rstrip("/")
 RATIOS = {"16:9", "9:16", "1:1"}
 SHOT = 5
 LIMIT = 3 * 3600
-STYLES = {"2D": "hand-drawn 2D animation", "2.5D": "layered 2.5D animation with parallax", "3D": "cinematic 3D animation"}
+STYLES = {"2D": "hand-drawn 2D animation", "2.5D": "layered 2.5D animation with parallax", "3D": "cinematic 3D animation",
+          "Cinematic": "cinematic filmmaking, expressive lighting and purposeful camera movement",
+          "Presenter": "on-camera presenter addressing the audience, medium shot and natural gestures",
+          "Avatar": "expressive digital avatar, character-focused framing and natural movement"}
 
 
 @contextlib.contextmanager
@@ -66,20 +69,23 @@ def now():
     return int(time.time())
 
 
-def estimate(seconds):
-    # All checkout decisions use the same integer-second reservation.
-    gpu = math.ceil(seconds / SHOT) * int(os.getenv("SHOT_GPU_SECONDS", "45"))
-    rate = Decimal(os.getenv("GPU_LKR_PER_MIN", "20"))
-    fee = Decimal(os.getenv("GATEWAY_FRACTION", "0.04"))
-    if gpu <= 0 or rate <= 0 or not 0 <= fee < 1:
-        raise RuntimeError("invalid quote configuration")
-    price = math.ceil((gpu * rate / 60 + Decimal(os.getenv("ORDER_OVERHEAD_LKR", "30"))) / (1 - fee))
-    return gpu, gpu + int(os.getenv("ORDER_BUFFER_SECONDS", "240")), max(1, price)
+def offer(paid_seconds):
+    bonus = paid_seconds // 10 if paid_seconds in (60, 300, 600) else 0
+    # Prorate 46 US cents per minute, rounding to the nearest cent.
+    cents = max(1, (paid_seconds * 46 + 30) // 60)
+    return paid_seconds + bonus, cents
+
+
+def estimate(delivered_seconds):
+    gpu = math.ceil(delivered_seconds / SHOT) * int(os.getenv("SHOT_GPU_SECONDS", "45"))
+    if gpu <= 0:
+        raise RuntimeError("invalid render estimate")
+    return gpu, gpu + int(os.getenv("ORDER_BUFFER_SECONDS", "240"))
 
 
 def availability(con, seconds, gpu, eta):
     required = ["PAYHERE_MERCHANT_ID", "PAYHERE_MERCHANT_SECRET", "SMTP_HOST", "SMTP_FROM",
-                "SHOT_GPU_SECONDS", "GPU_LKR_PER_MIN", "FREE_GPU_SECONDS", "BUDGET_START_UNIX",
+                "SHOT_GPU_SECONDS", "FREE_GPU_SECONDS", "BUDGET_START_UNIX",
                 "BENCHMARK_MAX_SECONDS", "MODAL_APP", "MODAL_FUNCTION"]
     if os.getenv("CHECKOUT_ENABLED") != "1" or any(not os.getenv(k) for k in required):
         return "Checkout opens after the payment and render pilot is verified."
@@ -99,10 +105,6 @@ def availability(con, seconds, gpu, eta):
     return ""
 
 
-def usd_cents(price):
-    return max(1, int((Decimal(price) * 100 / Decimal("332.82")).quantize(Decimal(1))))
-
-
 def validate_spec(seconds, ratio):
     if not 1 <= seconds <= 1800 or ratio not in RATIOS:
         raise HTTPException(422, "Choose 1–1800 seconds and a supported aspect ratio.")
@@ -111,10 +113,11 @@ def validate_spec(seconds, ratio):
 @app.get("/api/quote")
 def quote(seconds: int, ratio: str):
     validate_spec(seconds, ratio)
-    gpu, eta, price = estimate(seconds)
+    delivered, price = offer(seconds)
+    gpu, eta = estimate(delivered)
     with db() as con:
-        reason = availability(con, seconds, gpu, eta)
-    return dict(amount_usd=usd_cents(price)/100, available=not reason, reason=reason, estimated_minutes=math.ceil(eta/60))
+        reason = availability(con, delivered, gpu, eta)
+    return dict(amount_usd=price/100, bonus_seconds=delivered-seconds, delivered_seconds=delivered, available=not reason, reason=reason, estimated_minutes=math.ceil(eta/60))
 
 
 class Order(BaseModel):
@@ -144,21 +147,21 @@ def checkout(order: Order):
     validate_spec(order.seconds, order.ratio)
     if order.style not in STYLES or not order.prompt.strip():
         raise HTTPException(422, "Enter a prompt and select an animation style.")
-    gpu, eta, price = estimate(order.seconds)
-    price = usd_cents(price)
+    delivered, price = offer(order.seconds)
+    gpu, eta = estimate(delivered)
     oid, token = secrets.token_hex(12), secrets.token_urlsafe(32)
     with db() as con:
         con.execute("BEGIN IMMEDIATE")
-        reason = availability(con, order.seconds, gpu, eta)
+        reason = availability(con, delivered, gpu, eta)
         if reason:
             raise HTTPException(409, reason)
         con.execute("""INSERT INTO orders(id,token,email,prompt,style,ratio,seconds,amount,gpu,eta,created,state,currency)
                     VALUES(?,?,?,?,?,?,?,?,?,?,?,'awaiting','USD')""",
-                    (oid,token,order.email,order.prompt.strip(),order.style,order.ratio,order.seconds,price,gpu,eta,now()))
+                    (oid,token,order.email,order.prompt.strip(),order.style,order.ratio,delivered,price,gpu,eta,now()))
     merchant, amount = os.environ["PAYHERE_MERCHANT_ID"], f"{price//100}.{price%100:02d}"
     fields = order.model_dump(include={"first_name","last_name","email","phone","address","city","country"})
     status = BASE + "/api/status/" + token
-    fields.update(merchant_id=merchant, order_id=oid, items=f"{order.seconds}s animation",
+    fields.update(merchant_id=merchant, order_id=oid, items=f"{delivered}s video ({order.seconds}s paid)",
                   currency="USD", amount=amount, hash=signature(merchant,oid,amount,"USD"),
                   return_url=status, cancel_url=status, notify_url=BASE+"/api/payhere")
     host = "www" if os.getenv("PAYHERE_LIVE") == "1" else "sandbox"
@@ -365,4 +368,5 @@ if __name__ == "__main__":
         worker()
     elif len(sys.argv)==3 and sys.argv[1]=="render":
         render(sys.argv[2])
+
 
