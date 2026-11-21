@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#13151c">
+<title>Video Studio · vid.best</title>
+<style>
+:root{color-scheme:dark;--bg:#101117;--panel:#191a22;--edge:#34353e;--muted:#b9b7c4;--text:#f4f1f7;--accent:#d2c2ff;--focus:#e1d8ff;font-family:"DM Sans",Inter,system-ui,sans-serif}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 76% 0%,#23202e 0,transparent 43%),var(--bg);color:var(--text);min-height:100vh}header{border-bottom:1px solid #34313a}.bar,main,footer{max-width:1220px;margin:auto;padding-inline:clamp(20px,4.5vw,65px)}.bar{height:70px;display:flex;align-items:center;gap:17px}.brand{font-weight:850;letter-spacing:-.07em;font-size:1.6rem;display:flex;align-items:center;gap:11px}.logo{display:inline-block;width:28px;height:26px;position:relative;background:var(--accent);clip-path:polygon(0 4%,30% 4%,48% 47%,69% 4%,100% 4%,52% 100%,41% 100%)}.studio{font-size:.92rem;color:var(--muted);border-left:1px solid #55525f;padding-left:17px}.hero{padding-block:clamp(32px,5vw,62px) 28px}h1{font-size:clamp(2.6rem,5.3vw,4.7rem);font-weight:590;line-height:1;letter-spacing:-.072em;margin:0 0 14px}.hero p,.help,.availability,.small{color:var(--muted);line-height:1.5}.hero p{font-size:1.05rem;margin:0}.workspace{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);gap:20px;align-items:start}.card{border:1px solid var(--edge);border-radius:19px;background:var(--panel);overflow:hidden}.editor,.summary{padding:clamp(19px,3vw,30px)}form{margin:0}h2,legend,label{font-size:1rem;font-weight:650;letter-spacing:-.014em}h2{font-size:1.22rem;margin:0}.line{display:flex;align-items:center;justify-content:space-between;gap:12px}.counter{font: .76rem ui-monospace,monospace;color:var(--muted)}textarea,input{color:inherit;background:#121319;border:1px solid #42424f;border-radius:9px;font:inherit}textarea{width:100%;min-height:140px;resize:vertical;padding:15px;margin:10px 0 21px;line-height:1.55}textarea::placeholder,input::placeholder{color:#a8a7b4}fieldset{border:0;padding:0;margin:0 0 22px}legend{padding:0 0 10px}.options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.opt{position:relative;cursor:pointer}.opt input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}.opt span{display:flex;align-items:center;justify-content:center;gap:7px;border:1px solid #41424c;border-radius:8px;min-height:43px;font-size:.94rem;font-weight:500;color:#c9c6d1;background:#20212b}.opt input:checked+span{background:#393246;border-color:#a995d5;color:#e4d7ff}.opt input:focus-visible+span,:is(input,textarea,button):focus-visible{outline:2px solid var(--focus);outline-offset:3px}.opt input:hover+span{border-color:#a39bb2}.shape{border:1px solid currentColor;border-radius:2px;width:16px;height:10px}.vertical{width:9px;height:14px}.square{width:12px;height:12px}.duration{display:flex;align-items:center;gap:9px;margin-top:10px}.duration input{width:5.7rem;padding:10px}.help,.small,.availability{font-size:.9rem}.help{margin:7px 0 0}.preview{background:#17171e}.previewhead{padding:19px 22px;display:flex;align-items:center;justify-content:space-between;gap:10px}.previewhead span{font: .75rem ui-monospace,monospace;letter-spacing:.03em;color:var(--muted)}.stage{height:clamp(190px,20vw,250px);display:grid;place-items:center;background:repeating-linear-gradient(135deg,#17171e 0 8px,#191921 8px 9px);border-block:1px solid var(--edge);overflow:hidden}.frame{position:relative;overflow:hidden;aspect-ratio:16/9;width:auto;height:min(100%,calc((100vw - 44px)*.5625));max-width:100%;isolation:isolate;background:linear-gradient(164deg,#362951 0%,#956684 42%,#f2a38e 76%,#fcc396);box-shadow:0 0 38px #0006}.frame:before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 68% 46%,#ffb99866,transparent 43%)}.sun{position:absolute;left:56%;top:18%;width:25%;aspect-ratio:1;background:#ffcfad;border-radius:50%;box-shadow:0 0 34px #fdb29470}.ridge{position:absolute;inset:0;clip-path:polygon(0 62%,10% 57%,21% 62%,36% 37%,51% 61%,64% 47%,77% 55%,91% 37%,100% 48%,100% 100%,0 100%);background:#795571}.mid{clip-path:polygon(0 56%,16% 72%,32% 58%,46% 70%,58% 57%,68% 69%,82% 47%,100% 61%,100% 100%,0 100%);background:linear-gradient(25deg,#4c3c63,#765774)}.near{clip-path:polygon(0 79%,18% 72%,30% 77%,44% 67%,55% 75%,65% 72%,81% 81%,100% 63%,100% 100%,0 100%);background:linear-gradient(15deg,#27273e,#51415e)}.frame[style*="9 / 16"]{height:100%}.guide{position:absolute;width:18px;height:18px;border:solid #fff8;top:12px;left:12px;border-width:1px 0 0 1px}.guide.end{inset:auto 12px 12px auto;transform:rotate(180deg)}.summary{border-top:1px solid var(--edge)}.preview .small{margin:12px 22px 16px}.price{font-size:1.15rem;font-weight:650}.availability{margin:12px 0 17px}.pay{width:100%;background:#d6c5ff;border:0;border-radius:10px;color:#21172e;font:inherit;font-weight:730;padding:13px;cursor:pointer}.pay:disabled{background:#36343f;color:#c0b9cb;cursor:default}.details{margin-top:17px}.billing{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}.billing label{min-width:0;font-size:.88rem}.billing input{width:100%;padding:10px;margin-top:6px}.wide{grid-column:1/-1}[hidden]{display:none!important}footer{color:#aaa6b4;font-size:.85rem;padding-block:23px 38px}button{touch-action:manipulation}@media(max-width:760px){.workspace{grid-template-columns:1fr}.hero{padding-top:35px}.stage{height:225px}.bar{height:57px}.previewhead{padding-block:16px}}@media(max-width:360px){.opt span{font-size:.85rem}.billing{grid-template-columns:1fr}.bar,main,footer{padding-inline:14px}}
+</style>
+</head>
+<body>
+<header><div class="bar"><span class="brand"><i class="logo" aria-hidden="true"></i>vid.best</span><span class="studio">Video Studio</span></div></header>
+<main><div class="hero"><h1>Create a video</h1><p>Describe your scene, choose a style and set the running time.</p></div>
+<form id="studio"><div class="workspace"><section class="card editor" aria-label="Video settings">
+<div class="line"><label for="prompt">Scene prompt</label><span id="count" class="counter">0 / 2000</span></div>
+<textarea id="prompt" name="prompt" required maxlength="2000" placeholder="A little paper boat drifts through a neon-lit city after the rain. The camera follows at water level…"></textarea>
+<fieldset><legend>Visual style</legend><div class="options">
+<label class="opt"><input type="radio" name="style" value="2D" checked><span>2D</span></label>
+<label class="opt"><input type="radio" name="style" value="2.5D"><span>2.5D</span></label>
+<label class="opt"><input type="radio" name="style" value="3D"><span>3D</span></label>
+</div></fieldset>
+<fieldset><legend>Aspect ratio</legend><div class="options">
+<label class="opt"><input type="radio" name="ratio" value="16:9" checked><span><i class="shape"></i>16:9</span></label>
+<label class="opt"><input type="radio" name="ratio" value="9:16"><span><i class="shape vertical"></i>9:16</span></label>
+<label class="opt"><input type="radio" name="ratio" value="1:1"><span><i class="shape square"></i>1:1</span></label>
+</div></fieldset>
+<label for="seconds">Video duration</label><div class="duration"><input id="seconds" name="seconds" type="number" min="1" max="1800" step="1" value="10" required aria-describedby="limit">seconds</div><p id="limit" class="help">Up to 30 minutes, subject to GPU availability.</p>
+</section><aside class="card preview"><div class="previewhead"><h2>Frame preview</h2><span id="spec">16:9 · 2D</span></div>
+<div class="stage"><div class="frame" id="frame" aria-hidden="true"><div class="sun"></div><div class="ridge"></div><div class="ridge mid"></div><div class="ridge near"></div><div class="guide"></div><div class="guide end"></div></div></div>
+<p class="small">Sample artwork for framing.</p>
+<div class="summary"><div class="line"><h2>Estimated price</h2><output id="price" class="price">—</output></div>
+<p class="availability" aria-live="polite" id="message">Checking pilot availability…</p>
+<div id="details" class="details" hidden><fieldset disabled id="bill"><legend>Delivery &amp; billing</legend><div class="billing">
+<label class="wide">Delivery email<input type="email" name="email" autocomplete="email" required maxlength="254"></label>
+<label>First name<input name="first_name" autocomplete="given-name" required maxlength="80"></label><label>Last name<input name="last_name" autocomplete="family-name" required maxlength="80"></label>
+<label class="wide">Street address<input name="address" autocomplete="street-address" required maxlength="180"></label><label>City<input name="city" autocomplete="address-level2" required maxlength="80"></label><label>Country<input name="country" autocomplete="country-name" required maxlength="80" value="Sri Lanka"></label>
+<label class="wide">Phone<input type="tel" name="phone" autocomplete="tel" required maxlength="30"></label></div></fieldset>
+<p class="small">After payment, you can close this page. Your video download link will arrive by email.</p></div>
+<button type="submit" id="pay" class="pay" disabled>Checkout closed</button></div></aside></div></form></main>
+<footer>vid.best Video Studio</footer>
+<script>
+'use strict';
+const form = document.querySelector('#studio'), get = id => document.getElementById(id);
+let timer, revision = 0, currentQuote = null, submitting = false;
+const dimensions = {'16:9':'16 / 9','9:16':'9 / 16','1:1':'1 / 1'};
+function showQuote(q, fallback) {
+  currentQuote = q;
+  const amount = q?.amount_lkr;
+  get('price').textContent = amount != null && Number.isFinite(Number(amount)) ? new Intl.NumberFormat('en-LK',{style:'currency',currency:'LKR'}).format(amount) : '—';
+  const ready = q?.available === true && Number(amount) > 0;
+  get('details').hidden = !ready;
+  get('bill').disabled = !ready;
+  get('pay').disabled = !ready || submitting;
+  get('pay').textContent = ready ? 'Continue to Visa checkout' : 'Checkout closed';
+  get('message').textContent = ready ? (Number(q.estimated_minutes)>0 ? 'Estimated delivery in '+Math.ceil(q.estimated_minutes)+' minutes.' : 'Your video will be delivered by email.') : q?.reason || fallback || 'Pilot checkout is currently closed. You can still explore the video settings.';
+}
+function update() {
+  const ratio = form.elements.ratio.value, seconds = form.elements.seconds.value, serial = ++revision;
+  get('frame').style.aspectRatio = dimensions[ratio];
+  get('spec').textContent = ratio+' · '+form.elements.style.value;
+  clearTimeout(timer);
+  if (!form.elements.seconds.validity.valid) {
+    showQuote(null,'Enter a whole-number duration from '+form.elements.seconds.min+' to 1,800 seconds.');
+    return;
+  }
+  showQuote(null,'Checking price and GPU availability…');
+  timer = setTimeout(async () => {
+    try {
+      const response = await fetch('/api/quote?'+new URLSearchParams({ratio,seconds}), {cache:'no-store'});
+      if (!response.ok) throw Error();
+      const q = await response.json();
+      if (serial === revision) showQuote(q);
+    } catch {
+      if (serial === revision) showQuote(null);
+    }
+  },160);
+}
+get('prompt').addEventListener('input', e => {get('count').textContent = e.target.value.length+' / 2000';});
+form.addEventListener('input',e=>{if (['ratio','seconds','style'].includes(e.target.name)) update();});
+form.addEventListener('submit',async e=>{
+  e.preventDefault();
+  if (submitting || currentQuote?.available !== true || !form.reportValidity()) return;
+  const data = Object.fromEntries(new FormData(form));
+  data.seconds = Number(data.seconds);
+  submitting = true;
+  get('pay').disabled = true;
+  get('message').textContent = 'Preparing secure checkout…';
+  try {
+    const res = await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    const out = await res.json();
+    if (!res.ok) throw Error(typeof out.detail==='string' ? out.detail : 'Checkout is temporarily unavailable.');
+    if (!['https://www.payhere.lk/pay/checkout','https://sandbox.payhere.lk/pay/checkout'].includes(out.url) || !out.fields) throw Error('The payment gateway is unavailable.');
+    const transfer = document.createElement('form');
+    transfer.method = 'POST'; transfer.action = out.url;
+    for (const [name,value] of Object.entries(out.fields)) {
+      const input = document.createElement('input'); input.type = 'hidden'; input.name = name; input.value = value; transfer.append(input);
+    }
+    document.body.append(transfer); transfer.submit();
+  } catch (err) {
+    submitting = false;
+    get('pay').disabled = currentQuote?.available !== true;
+    get('message').textContent = err.message || 'Unable to open checkout. Please try again.';
+  }
+});
+update();
+</script></body></html>
