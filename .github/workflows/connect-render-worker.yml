@@ -1,0 +1,69 @@
+name: Connect private video worker
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/connect-render-worker.yml']
+permissions:
+  contents: write
+concurrency:
+  group: connect-render-worker
+jobs:
+  configure:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Encrypt worker settings for the Oracle host
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          set -eu
+          umask 077
+          cat > "$RUNNER_TEMP/recipient.pem" <<'KEY'
+          -----BEGIN PUBLIC KEY-----
+          MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA00DGpG6GPLYSIxNWa7RZ
+          jgyXKAGeGwgxsREdD2Lmoy+wTjaBlTztQIgRc3BJP2M6sMUU2NCYQJr3uiCna+VW
+          IdvSQ8HuGr9r8hJfNV81eI+9hkHLJFIYZf7Hqdth3krwZ3wXd9z7wrf4ArIMV4gz
+          kEU9pJ+5Z1ZEFlV4NOCvwfZIsKMvgbCHKoeL/XTOyb2fBve/tKOXbWHfny7unmIa
+          e3niU7qJgbp0RPZKZn6qQAj+zhbrute7n7LMvVjpbJQWnBzE+i7INxTfRG9kJG3K
+          zq36tG2yANpBaCOuITqbvG85KHFaR8uGfHgUk7tTgmM1skfLDv/5fhM/R5juiemg
+          IyCpSiLtgRNCtQM+wxrjoIeT1DMC6ilrL/ZOHy7r+uboN2HICKqtLPGqSPTwkurN
+          C5Z/ifRDkvDbhb4YlKwYCxPNnTFD3sbF1Kud9eFlNWI3A3pXiC8y6RDJByjwjITd
+          j+hu/t9LIsCNwVjd4/+ZM9cxmyfWJmLNOc1Q9u9Y34hbMIbqcEAdHxMxcVBgrASN
+          T13jLlr3htfVG67SqU4Lr5cBzF/1L+LsGlEsEP4HL7hDsEQlZnoWaHXug4cUjIEA
+          GEqP2cwnrj1iNwxjfoKi7dMRlK3z0O2DPbQ/F129nfbazZ4hBP2epbbis1tykiD6
+          VdMmVEKmB0INX3wXq19020MCAwEAAQ==
+          -----END PUBLIC KEY-----
+          KEY
+          /usr/bin/python3 - <<'PY'
+          import json, os, re, base64
+          from pathlib import Path
+          from cryptography.fernet import Fernet
+          from cryptography.hazmat.primitives import hashes, serialization
+          from cryptography.hazmat.primitives.asymmetric import padding
+          mid, secret = (os.environ[k] for k in ("MODAL_TOKEN_ID","MODAL_TOKEN_SECRET"))
+          if not re.fullmatch(r"[A-Za-z0-9_-]{8,200}",mid) or not re.fullmatch(r"[A-Za-z0-9+/=_-]{8,2048}",secret):
+              raise SystemExit("Check both Modal repository secrets.")
+          folder = Path(os.environ["RUNNER_TEMP"])
+          pub = serialization.load_pem_public_key((folder/"recipient.pem").read_bytes())
+          key = Fernet.generate_key()
+          wrapped = pub.encrypt(key,padding.OAEP(padding.MGF1(hashes.SHA256()), hashes.SHA256(),None))
+          payload = json.dumps([mid,secret]).encode()
+          envelope = dict(key=base64.b64encode(wrapped).decode(),data=Fernet(key).encrypt(payload).decode())
+          (folder/"worker.json").write_text(json.dumps(envelope))
+          PY
+      - name: Deliver encrypted settings
+        run: |
+          set -eu
+          branch=modal-worker-config
+          blob=$(git hash-object -w "$RUNNER_TEMP/worker.json")
+          tree=$(printf '100644 blob %s\tworker.json\n' "$blob" | git mktree)
+          parents=()
+          if git ls-remote --exit-code origin "refs/heads/$branch" >/dev/null; then
+            git fetch -q origin "refs/heads/$branch"
+            parents=(-p FETCH_HEAD)
+          fi
+          rev=$(git -c user.name=vidbest-config -c user.email=actions@users.noreply.github.com commit-tree "$tree" "${parents[@]}" -m "Deliver encrypted worker settings")
+          git push origin "$rev:refs/heads/$branch"
