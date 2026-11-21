@@ -47,12 +47,19 @@ def db():
 
 with db() as con:
     con.execute("PRAGMA journal_mode=WAL")
+    con.execute("BEGIN IMMEDIATE")
     con.execute("""CREATE TABLE IF NOT EXISTS orders (
         id TEXT PRIMARY KEY, token TEXT UNIQUE, email TEXT, prompt TEXT, style TEXT,
         ratio TEXT, seconds INTEGER, amount INTEGER, gpu INTEGER, eta INTEGER,
         created INTEGER, paid INTEGER, payment_id TEXT UNIQUE, state TEXT,
         mail_at INTEGER DEFAULT 0, next_mail INTEGER DEFAULT 0)""")
     con.execute("""CREATE TABLE IF NOT EXISTS runtime (id INTEGER PRIMARY KEY, beat INTEGER)""")
+
+    columns = {col[1] for col in con.execute("PRAGMA table_info(orders)")}
+    for name, definition in [("currency","TEXT DEFAULT 'LKR'"), ("download_at","INTEGER"),
+                             ("backup_sha","TEXT"), ("retry_backup","INTEGER DEFAULT 0")]:
+        if name not in columns:
+            con.execute(f"ALTER TABLE orders ADD COLUMN {name} {definition}")
 
 
 def now():
@@ -92,6 +99,10 @@ def availability(con, seconds, gpu, eta):
     return ""
 
 
+def usd_cents(price):
+    return max(1, int((Decimal(price) * 100 / Decimal("332.82")).quantize(Decimal(1))))
+
+
 def validate_spec(seconds, ratio):
     if not 1 <= seconds <= 1800 or ratio not in RATIOS:
         raise HTTPException(422, "Choose 1–1800 seconds and a supported aspect ratio.")
@@ -103,7 +114,7 @@ def quote(seconds: int, ratio: str):
     gpu, eta, price = estimate(seconds)
     with db() as con:
         reason = availability(con, seconds, gpu, eta)
-    return dict(amount_lkr=price, available=not reason, reason=reason, estimated_minutes=math.ceil(eta/60))
+    return dict(amount_usd=usd_cents(price)/100, available=not reason, reason=reason, estimated_minutes=math.ceil(eta/60))
 
 
 class Order(BaseModel):
@@ -134,20 +145,21 @@ def checkout(order: Order):
     if order.style not in STYLES or not order.prompt.strip():
         raise HTTPException(422, "Enter a prompt and select an animation style.")
     gpu, eta, price = estimate(order.seconds)
+    price = usd_cents(price)
     oid, token = secrets.token_hex(12), secrets.token_urlsafe(32)
     with db() as con:
         con.execute("BEGIN IMMEDIATE")
         reason = availability(con, order.seconds, gpu, eta)
         if reason:
             raise HTTPException(409, reason)
-        con.execute("""INSERT INTO orders(id,token,email,prompt,style,ratio,seconds,amount,gpu,eta,created,state)
-                    VALUES(?,?,?,?,?,?,?,?,?,?,?,'awaiting')""",
+        con.execute("""INSERT INTO orders(id,token,email,prompt,style,ratio,seconds,amount,gpu,eta,created,state,currency)
+                    VALUES(?,?,?,?,?,?,?,?,?,?,?,'awaiting','USD')""",
                     (oid,token,order.email,order.prompt.strip(),order.style,order.ratio,order.seconds,price,gpu,eta,now()))
-    merchant, amount = os.environ["PAYHERE_MERCHANT_ID"], f"{price}.00"
+    merchant, amount = os.environ["PAYHERE_MERCHANT_ID"], f"{price//100}.{price%100:02d}"
     fields = order.model_dump(include={"first_name","last_name","email","phone","address","city","country"})
     status = BASE + "/api/status/" + token
     fields.update(merchant_id=merchant, order_id=oid, items=f"{order.seconds}s animation",
-                  currency="LKR", amount=amount, hash=signature(merchant,oid,amount,"LKR"),
+                  currency="USD", amount=amount, hash=signature(merchant,oid,amount,"USD"),
                   return_url=status, cancel_url=status, notify_url=BASE+"/api/payhere")
     host = "www" if os.getenv("PAYHERE_LIVE") == "1" else "sandbox"
     return dict(url=f"https://{host}.payhere.lk/pay/checkout", fields=fields)
@@ -170,12 +182,12 @@ async def payhere(request: Request):
         value = Decimal(amount)
     except (ValueError,KeyError,TypeError,InvalidOperation):
         raise HTTPException(400)
-    if not valid or merchant != os.getenv("PAYHERE_MERCHANT_ID") or currency != "LKR" or not value.is_finite():
+    if not valid or merchant != os.getenv("PAYHERE_MERCHANT_ID") or currency not in ("LKR","USD") or not value.is_finite():
         raise HTTPException(403)
     with db() as con:
         con.execute("BEGIN IMMEDIATE")
         row = con.execute("SELECT * FROM orders WHERE id=?",(oid,)).fetchone()
-        if not row or value != row["amount"]:
+        if not row or currency != row["currency"] or value * (100 if currency == "USD" else 1) != row["amount"]:
             raise HTTPException(409)
         if state == "2":
             payment = data.get("payment_id")
@@ -216,7 +228,38 @@ def download(token: str):
         row = con.execute("SELECT id FROM orders WHERE token=? AND state='ready'", (token,)).fetchone()
     if not row or not (path := DATA / row["id"] / "film.mp4").is_file():
         raise HTTPException(404)
+    with db() as con:
+        con.execute("UPDATE orders SET download_at=? WHERE id=?", (now(),row["id"]))
     return FileResponse(path,media_type="video/mp4",filename="animation.mp4",headers={"Cache-Control":"private, no-store"})
+
+
+def copy_signature(row, expires):
+    return hmac.new(row["token"].encode(), f"backup/{row['id']}/{expires}".encode(), hashlib.sha256).hexdigest()
+
+
+@app.get("/api/support-copy/{oid}")
+def support_copy(oid: str, expires: int, sig: str):
+    with db() as con:
+        row = con.execute("SELECT id,token FROM orders WHERE id=? AND state='ready'",(oid,)).fetchone()
+    if not row or not now() <= expires <= now()+1800 or not hmac.compare_digest(copy_signature(row,expires), sig):
+        raise HTTPException(404)
+    return FileResponse(DATA/oid/"film.mp4",media_type="video/mp4",headers={"Cache-Control":"private, no-store"})
+
+
+def archive_pending():
+    with db() as con:
+        row = con.execute("SELECT id,token FROM orders WHERE state='ready' AND backup_sha IS NULL AND retry_backup<=? LIMIT 1",(now(),)).fetchone()
+        if not row:
+            return
+        con.execute("UPDATE orders SET retry_backup=? WHERE id=?",(now()+1800,row["id"]))
+    import modal
+    with (DATA/row["id"]/"film.mp4").open("rb") as stream:
+        sha = hashlib.file_digest(stream,"sha256").hexdigest()
+    expires = now()+1800
+    uploaded = modal.Function.from_name("vidbest-delivery-archive","backup").remote(row["id"],expires,copy_signature(row,expires),sha)
+    if uploaded == sha:
+        with db() as con:
+            con.execute("UPDATE orders SET backup_sha=? WHERE id=?", (sha,row["id"]))
 
 
 def render(oid):
@@ -258,7 +301,7 @@ def mail(row):
     ready = row["state"] == "ready"
     message["Subject"] = "Your animation is ready" if ready else "Your animation order needs a refund review"
     message.set_content(("Download your watermark-free MP4" if ready else "Delivery could not finish. Your payment is under review.")+
-                        "\n"+BASE+"/api/status/"+row["token"])
+                        "\nOrder reference: "+row["id"]+"\n"+BASE+"/api/status/"+row["token"])
     with smtplib.SMTP(os.environ["SMTP_HOST"],int(os.getenv("SMTP_PORT","587")),timeout=15) as smtp:
         smtp.starttls(context=ssl.create_default_context())
         if os.getenv("SMTP_USER"):
@@ -316,7 +359,10 @@ def worker():
 
 
 if __name__ == "__main__":
-    if sys.argv[1:] == ["worker"]:
+    if sys.argv[1:] == ["archive"]:
+        archive_pending()
+    elif sys.argv[1:] == ["worker"]:
         worker()
     elif len(sys.argv)==3 and sys.argv[1]=="render":
         render(sys.argv[2])
+

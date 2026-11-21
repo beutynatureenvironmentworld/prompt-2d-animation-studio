@@ -10,3 +10,8 @@ def studio():
         "X-Content-Type-Options": "nosniff",
         "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action https://sandbox.payhere.lk https://www.payhere.lk",
     })
+
+
+@app.get("/policy", include_in_schema=False)
+def policy():
+    return FileResponse(Path(__file__).with_name("policy.html"), headers={"Cache-Control": "no-cache"})

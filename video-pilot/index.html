@@ -32,19 +32,16 @@
 <div class="stage"><div class="frame" id="frame" aria-hidden="true"><div class="sun"></div><div class="ridge"></div><div class="ridge mid"></div><div class="ridge near"></div><div class="guide"></div><div class="guide end"></div></div></div>
 <p class="small">Sample artwork for framing.</p>
 <div class="summary"><div class="line"><h2>Estimated price</h2><output id="price" class="price">—</output></div>
-<p class="small" id="billingPrice" hidden></p>
+<label class="wide">Delivery email (required)<input type="email" name="email" autocomplete="email" required maxlength="254"></label>
+<p class="small">We’ll send your private video link here. For your first order, try a short, low-cost clip to check the result.</p>
 <p class="availability" aria-live="polite" id="message">Checking pilot availability…</p>
 <div id="details" class="details" hidden><fieldset disabled id="bill"><legend>Delivery &amp; billing</legend><div class="billing">
-<label class="wide">Delivery email<input type="email" name="email" autocomplete="email" required maxlength="254"></label>
+
 <label>First name<input name="first_name" autocomplete="given-name" required maxlength="80"></label><label>Last name<input name="last_name" autocomplete="family-name" required maxlength="80"></label>
-<label class="wide">Street address<input name="address" autocomplete="street-address" required maxlength="180"></label><label>City<input name="city" autocomplete="address-level2" required maxlength="80"></label><label>Country<input name="country" autocomplete="country-name" required maxlength="80" value="Sri Lanka"></label>
+<label class="wide">Street address<input name="address" autocomplete="street-address" required maxlength="180"></label><label>City<input name="city" autocomplete="address-level2" required maxlength="80"></label><label>Country<input name="country" autocomplete="country-name" required maxlength="80" placeholder="Country"></label>
 <label class="wide">Phone<input type="tel" name="phone" autocomplete="tel" required maxlength="30"></label></div></fieldset>
 <p class="small">After payment, you can close this page. Your video download link will arrive by email.</p></div>
-<section class="refund" aria-labelledby="refund-title">
-<h2 id="refund-title">Refund policy</h2>
-<p>To keep video generation affordable and cover rendering costs, we currently do not offer refunds for completed videos. If your video has a technical issue or does not arrive, please email <!--email_off--><a href="mailto:info@vid.best">info@vid.best</a><!--/email_off--> so we can review your order. Thank you for helping us keep prices low.</p>
-<details lang="si"><summary>සිංහලෙන් කියවන්න</summary><p>වීඩියෝ නිර්මාණ ගාස්තු අඩුවෙන් තබා ගැනීමටත් නිෂ්පාදන වියදම් පියවා ගැනීමටත්, සම්පූර්ණ කර ලබාදුන් වීඩියෝ සඳහා දැනට මුදල් ආපසු ලබා නොදෙන බව කරුණාවෙන් සලකන්න. වීඩියෝවේ තාක්ෂණික දෝෂයක් තිබේ නම් හෝ වීඩියෝව නොලැබුණේ නම්, ඔබේ ඇණවුම සමාලෝචනය කිරීමට <!--email_off--><a href="mailto:info@vid.best">info@vid.best</a><!--/email_off--> වෙත දන්වන්න. සේවාව සහනදායී මිලකට පවත්වා ගැනීමට ඔබ දෙන සහායට ස්තූතියි.</p></details>
-</section>
+<p class="refund small">By continuing to payment, you agree to our <a href="/policy" target="_blank" rel="noopener">Policies and Terms</a>.</p>
 <button type="submit" id="pay" class="pay" disabled>Checkout closed</button></div></aside></div></form></main>
 <footer>vid.best Video Studio</footer>
 <script>
@@ -54,14 +51,8 @@ let timer, revision = 0, currentQuote = null, submitting = false;
 const dimensions = {'16:9':'16 / 9','9:16':'9 / 16','1:1':'1 / 1'};
 function showQuote(q, fallback) {
   currentQuote = q;
-  const amount = q?.amount_lkr;
-  const hasPrice = Number.isFinite(amount) && amount > 0;
-  const usdEstimate = new Intl.NumberFormat('en-US', {style:'currency', currency:'USD', currencyDisplay:'code'}).format(amount / 332.82);
-  get('price').textContent = hasPrice ? usdEstimate : '—';
-  get('billingPrice').hidden = !hasPrice;
-  get('billingPrice').textContent = hasPrice
-    ? 'Checkout amount: LKR ' + amount.toLocaleString('en-LK') + '. USD estimate at LKR 332.82 per dollar (20 Nov 2026). Your card issuer’s rate may vary.'
-    : '';
+  const amount = q?.amount_usd;
+  get('price').textContent = amount ? new Intl.NumberFormat('en-US', {style:'currency',currency:'USD',currencyDisplay:'code'}).format(amount) : '—';
   const ready = q?.available === true && Number(amount) > 0;
   get('details').hidden = !ready;
   get('bill').disabled = !ready;
@@ -119,3 +110,4 @@ form.addEventListener('submit',async e=>{
 });
 update();
 </script></body></html>
+
