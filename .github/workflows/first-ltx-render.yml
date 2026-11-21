@@ -1,0 +1,43 @@
+name: First private LTX 2.5 render
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/first-ltx-render.yml']
+permissions:
+  contents: read
+concurrency: first-private-ltx-render
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 85
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'modal>=1,<2'
+      - name: Stage weights and render one second
+        working-directory: video-pilot
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          set -eu
+          modal run engine.py::prepare_weights
+          modal deploy engine.py
+          python - <<'PY'
+          from pathlib import Path
+          from time import monotonic
+          import modal
+          start=monotonic()
+          shot=modal.Function.from_name("vidbest-ltx25","render_shot").remote("A blue paper boat sailing across a quiet pond, hand-drawn animation.", "16:9", 1, 42)
+          Path("first-shot.mp4").write_bytes(shot)
+          print("Wall seconds",round(monotonic()-start),"bytes",len(shot))
+          PY
+          sudo apt-get update -qq && sudo apt-get install -qq -y ffmpeg
+          ffmpeg -v error -i first-shot.mp4 -f null -
+      - uses: actions/upload-artifact@v4
+        with:
+          name: first-ltx25-gpu-shot
+          path: video-pilot/first-shot.mp4
