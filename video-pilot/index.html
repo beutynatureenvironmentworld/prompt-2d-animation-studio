@@ -31,6 +31,7 @@
 <div class="stage"><div class="frame" id="frame" aria-hidden="true"><div class="sun"></div><div class="ridge"></div><div class="ridge mid"></div><div class="ridge near"></div><div class="guide"></div><div class="guide end"></div></div></div>
 <p class="small">Sample artwork for framing.</p>
 <div class="summary"><div class="line"><h2>Estimated price</h2><output id="price" class="price">—</output></div>
+<p class="small" id="billingPrice" hidden></p>
 <p class="availability" aria-live="polite" id="message">Checking pilot availability…</p>
 <div id="details" class="details" hidden><fieldset disabled id="bill"><legend>Delivery &amp; billing</legend><div class="billing">
 <label class="wide">Delivery email<input type="email" name="email" autocomplete="email" required maxlength="254"></label>
@@ -48,7 +49,13 @@ const dimensions = {'16:9':'16 / 9','9:16':'9 / 16','1:1':'1 / 1'};
 function showQuote(q, fallback) {
   currentQuote = q;
   const amount = q?.amount_lkr;
-  get('price').textContent = amount != null && Number.isFinite(Number(amount)) ? new Intl.NumberFormat('en-LK',{style:'currency',currency:'LKR'}).format(amount) : '—';
+  const hasPrice = Number.isFinite(amount) && amount > 0;
+  const usdEstimate = new Intl.NumberFormat('en-US', {style:'currency', currency:'USD', currencyDisplay:'code'}).format(amount / 332.82);
+  get('price').textContent = hasPrice ? usdEstimate : '—';
+  get('billingPrice').hidden = !hasPrice;
+  get('billingPrice').textContent = hasPrice
+    ? 'Checkout amount: LKR ' + amount.toLocaleString('en-LK') + '. USD estimate at LKR 332.82 per dollar (20 Nov 2026). Your card issuer’s rate may vary.'
+    : '';
   const ready = q?.available === true && Number(amount) > 0;
   get('details').hidden = !ready;
   get('bill').disabled = !ready;
