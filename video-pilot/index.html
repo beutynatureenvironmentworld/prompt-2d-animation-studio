@@ -31,6 +31,7 @@
 </section><aside class="card preview"><div class="previewhead"><h2>Scene preview</h2><span id="spec">16:9 · 2D</span></div>
 <div class="stage"><div class="frame" id="frame" aria-hidden="true"><div class="sun"></div><div class="ridge"></div><div class="ridge mid"></div><div class="ridge near"></div><div class="guide"></div><div class="guide end"></div></div></div>
 <div class="summary"><p class="small">The illustration shows your framing. Generate a one-second motion clip and a still from your own scene before paying. Up to three previews per hour, subject to free GPU availability.</p>
+<div id="demoClip" hidden><video id="demoVideo" style="width:100%;max-height:250px" controls playsinline preload="none"></video><p class="small">Studio sample · A paper boat on a pond · <a href="/api/preview-demo/frame.jpg" target="_blank" rel="noopener">View still</a></p></div>
 <button class="pay" type="button" id="generatePreview">Generate free preview</button>
 <p id="previewStatus" role="status" class="small"></p>
 <div id="previewMedia" hidden><video id="motion" controls playsinline preload="metadata" style="width:100%;max-height:320px"></video><a id="still" target="_blank" rel="noopener"><img id="stillImage" alt="Generated frame from your scene" style="display:block;max-width:100%;max-height:180px;margin:12px 0">Open full-size still</a></div></div>
@@ -118,7 +119,13 @@ async function checkPreviewAvailability(){
   try{
     const response = await fetch('/api/preview-availability',{cache:'no-store'});
     if(!response.ok)return;
-    previewAvailable = (await response.json()).available;
+    const status = await response.json();
+    previewAvailable = status.available;
+    if(status.demo){
+      get('demoVideo').src='/api/preview-demo/motion.mp4';
+      get('demoVideo').poster='/api/preview-demo/frame.jpg';
+      get('demoClip').hidden=false;
+    }
     if(!previewRevision || !get('motion').hasAttribute('src') && get('generatePreview').disabled){
       get('generatePreview').disabled = !previewAvailable;
       get('previewStatus').textContent = previewAvailable?'':'Free motion previews are currently unavailable.';

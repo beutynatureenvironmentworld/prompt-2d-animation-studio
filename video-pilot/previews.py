@@ -39,8 +39,16 @@ def failure(status, message, wait=None):
 def availability():
     with db() as con:
         used = con.execute("SELECT used FROM preview_budget WHERE id=1").fetchone()[0]
-    return JSONResponse({"available": used < int(os.getenv("PREVIEW_TOTAL_CALLS", "0"))},
+    return JSONResponse({"available": used < int(os.getenv("PREVIEW_TOTAL_CALLS", "0")),
+                         "demo": (DATA/"preview-demo"/"frame.jpg").is_file()},
                         headers={"Cache-Control":"no-store"})
+
+
+@router.get("/api/preview-demo/{asset}")
+def demo(asset: str):
+    if asset not in {"motion.mp4", "frame.jpg"} or not (DATA/"preview-demo"/asset).is_file():
+        failure(404, "Studio sample unavailable.")
+    return FileResponse(DATA/"preview-demo"/asset, headers={"Cache-Control":"public, max-age=86400"})
 
 
 @router.post("/api/previews")
