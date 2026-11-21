@@ -1,0 +1,45 @@
+name: Check private Modal access for LTX
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/ltx-access.yml']
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'modal>=1,<2'
+      - name: Verify access to the pinned model on a short CPU invocation
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          set -eu
+          test -n "$MODAL_TOKEN_ID" && test -n "$MODAL_TOKEN_SECRET" || { echo "Missing GitHub Modal credential"; exit 1; }
+          cat > probe.py <<'PY'
+          import modal
+          app = modal.App("vidbest-ltx-access-check")
+          @app.function(secrets=[modal.Secret.from_name("vidbest-huggingface")], timeout=30, retries=0)
+          def check():
+              import os, urllib.request
+              url = "https://huggingface.co/Lightricks/LTX-2.5-Diffusers/resolve/426936f8b22dc28e4def61e515478b0b7e4a53cc/model_index.json"
+              request = urllib.request.Request(url, headers={"Authorization": "Bearer " + os.environ["HF_TOKEN"]})
+              import json
+              class Redirect(urllib.request.HTTPRedirectHandler):
+                  def redirect_request(self, req, fp, code, msg, headers, newurl):
+                      from urllib.parse import urlsplit
+                      redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
+                      if redirected and urlsplit(newurl).netloc != "huggingface.co":
+                          redirected.remove_header("Authorization")
+                      return redirected
+              with urllib.request.build_opener(Redirect).open(request, timeout=15) as response:
+                  assert json.load(response)["_class_name"]
+              print("Pinned model metadata accessible.")
+          PY
+          modal run probe.py::check
