@@ -1,6 +1,9 @@
 name: Connect delivery email
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/connect-delivery-email.yml']
 permissions:
   contents: write
 concurrency:
