@@ -1,0 +1,70 @@
+name: Personal LTX GPU trial
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/personal-ltx-trial.yml']
+permissions:
+  contents: read
+concurrency:
+  group: personal-ltx-trial
+  cancel-in-progress: false
+jobs:
+  private-kaggle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build a short personal example and portable Colab notebook
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq python3-cairo ffmpeg
+          python hybrid-gpu/cpu_handoff_smoke.py --output personal-trial
+      - uses: actions/upload-artifact@v4
+        with:
+          name: colab-ltx-notebook
+          path: personal-trial/gpu-trial-notebook.ipynb
+      - name: Submit private Kaggle LTX trial and collect verified shots
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+        run: |
+          test -n "$KAGGLE_API_TOKEN" && test -n "$KAGGLE_USERNAME"
+          python -m pip install -q kaggle six
+          python -u hybrid-gpu/orchestrator.py personal-trial/gpu-handoff-bundle.zip personal-trial/renders --model ltx --wait-minutes 60
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report, = Path('personal-trial/renders').rglob('report.json')
+          shots = json.loads(report.read_text())
+          assert shots and all(s['source'] != 'Oracle CPU' for s in shots), 'GPU shot unconfirmed'
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kaggle-ltx-episode
+          path: |
+            personal-trial/renders/**/episode.mp4
+            personal-trial/renders/**/report.json
+  horde-preview:
+    needs: private-kaggle
+    if: failure() && needs.private-kaggle.result == 'failure'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Produce a separate still-image animation preview
+        env:
+          AI_HORDE_API_KEY: ${{ secrets.AI_HORDE_API_KEY }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install 'Pillow>=10,<12'
+          python -u horde-studio/horde_generate.py
+          python -u horde-studio/render_horde_story.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: horde-still-image-preview
+          path: horde-studio/output/
