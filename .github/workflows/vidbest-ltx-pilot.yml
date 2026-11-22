@@ -2,6 +2,13 @@ name: Stage the private vid.best render engine
 on:
   workflow_dispatch:
     inputs:
+      workspace:
+        description: Modal deployment target
+        type: choice
+        options:
+          - primary
+          - fallback
+        default: primary
       confirmed_free_budget:
         description: I confirmed the workspace spending limit and remaining free compute credits
         required: true
@@ -14,7 +21,7 @@ jobs:
     timeout-minutes: 90
     permissions:
       contents: read
-    environment: video-pilot
+    environment: ${{ inputs.workspace == 'fallback' && 'video-pilot-fallback' || 'video-pilot' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
