@@ -59,7 +59,7 @@ with db() as con:
     con.execute("""CREATE TABLE IF NOT EXISTS runtime (id INTEGER PRIMARY KEY, beat INTEGER)""")
 
     columns = {col[1] for col in con.execute("PRAGMA table_info(orders)")}
-    for name, definition in [("currency","TEXT DEFAULT 'LKR'"), ("download_at","INTEGER"),
+    for name, definition in [("sound_enabled","INTEGER NOT NULL DEFAULT 1"), ("sound_prompt","TEXT NOT NULL DEFAULT ''"), ("currency","TEXT DEFAULT 'LKR'"), ("download_at","INTEGER"),
                              ("backup_sha","TEXT"), ("retry_backup","INTEGER DEFAULT 0")]:
         if name not in columns:
             con.execute(f"ALTER TABLE orders ADD COLUMN {name} {definition}")
@@ -123,6 +123,8 @@ def quote(seconds: int, ratio: str):
 class Order(BaseModel):
     email: str = Field(min_length=3, max_length=254, pattern=r"^[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+$")
     prompt: str = Field(min_length=1, max_length=3000)
+    sound_enabled: bool = True
+    sound_prompt: str = Field(default="", max_length=500)
     style: str
     ratio: str
     seconds: int = Field(strict=True, ge=1, le=1800)
@@ -155,9 +157,9 @@ def checkout(order: Order):
         reason = availability(con, delivered, gpu, eta)
         if reason:
             raise HTTPException(409, reason)
-        con.execute("""INSERT INTO orders(id,token,email,prompt,style,ratio,seconds,amount,gpu,eta,created,state,currency)
-                    VALUES(?,?,?,?,?,?,?,?,?,?,?,'awaiting','USD')""",
-                    (oid,token,order.email,order.prompt.strip(),order.style,order.ratio,delivered,price,gpu,eta,now()))
+        con.execute("""INSERT INTO orders(id,token,email,prompt,style,ratio,seconds,amount,gpu,eta,created,sound_enabled,sound_prompt,state,currency)
+                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'awaiting','USD')""",
+                    (oid,token,order.email,order.prompt.strip(),order.style,order.ratio,delivered,price,gpu,eta,now(),order.sound_enabled,order.sound_prompt.strip() if order.sound_enabled else ""))
     merchant, amount = os.environ["PAYHERE_MERCHANT_ID"], f"{price//100}.{price%100:02d}"
     fields = order.model_dump(include={"first_name","last_name","email","phone","address","city","country"})
     status = BASE + "/api/status/" + token
@@ -282,13 +284,15 @@ def render(oid):
                 raise RuntimeError("order no longer active")
         seconds = min(SHOT,row["seconds"]-i*SHOT)
         prompt = f'{STYLES[row["style"]]}. {row["prompt"]}\nShot {i+1} of {total}.'
+        if row["sound_enabled"] and row["sound_prompt"]:
+            prompt += "\nSound direction: " + row["sound_prompt"]
         data = function.remote(prompt,row["ratio"],seconds,int(oid[:8],16)+i)
         segment = folder / f"shot-{i:04}.mp4"
         segment.write_bytes(data)
         segments.append(f"file '{segment.name}'\n")
     (folder/"list.txt").write_text("".join(segments))
     subprocess.run(["ffmpeg","-v","error","-y","-f","concat","-safe","1","-i","list.txt",
-                    "-t",str(row["seconds"]),"-c","copy","-movflags","+faststart","tmp.mp4"],cwd=folder,check=True)
+                    "-t",str(row["seconds"]),*([] if row["sound_enabled"] else ["-an"]),"-c","copy","-movflags","+faststart","tmp.mp4"],cwd=folder,check=True)
     measured = float(subprocess.check_output(["ffprobe","-v","error","-show_entries","format=duration",
                       "-of","csv=p=0",str(folder/"tmp.mp4")],text=True).strip())
     if abs(measured-row["seconds"]) > 0.15:
