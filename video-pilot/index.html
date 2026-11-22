@@ -17,6 +17,11 @@
 <form id="studio"><div class="workspace"><section class="card editor" aria-label="Video settings">
 <div class="line"><label for="prompt">Scene prompt</label><span id="count" class="counter">0 / 2000</span></div>
 <textarea id="prompt" name="prompt" required maxlength="2000" placeholder="A little paper boat drifts through a neon-lit city after the rain. The camera follows at water level…"></textarea>
+<fieldset><legend>Sound in your final video</legend><div class="options">
+<label class="opt"><input type="radio" name="sound_enabled" value="on" checked><span>Sound on</span></label>
+<label class="opt"><input type="radio" name="sound_enabled" value="off"><span>Sound off</span></label></div></fieldset>
+<div id="soundDirection"><label for="soundPrompt">Sound prompt (optional)</label>
+<textarea id="soundPrompt" name="sound_prompt" maxlength="500" placeholder="Soft rain, footsteps on wet pavement, distant thunder…"></textarea></div>
 <fieldset><legend>Visual style</legend><div class="options">
 <label class="opt"><input type="radio" name="style" value="2D" checked><span>2D</span></label>
 <label class="opt"><input type="radio" name="style" value="2.5D"><span>2.5D</span></label>
@@ -99,10 +104,16 @@ get('packages').addEventListener('click', e=>{
 });
 get('prompt').addEventListener('input', e => {get('count').textContent = e.target.value.length+' / 2000';});
 form.addEventListener('input',e=>{if (['ratio','seconds','style'].includes(e.target.name)) update();});
+form.addEventListener('change', e => {
+  if (e.target.name === 'sound_enabled') {
+    get('soundDirection').hidden = get('soundPrompt').disabled = e.target.value === 'off';
+  }
+});
 form.addEventListener('submit',async e=>{
   e.preventDefault();
   if (submitting || currentQuote?.available !== true || !form.reportValidity()) return;
   const data = Object.fromEntries(new FormData(form));
+  data.sound_enabled = data.sound_enabled === 'on';
   data.seconds = Number(data.seconds);
   submitting = true;
   get('pay').disabled = true;
