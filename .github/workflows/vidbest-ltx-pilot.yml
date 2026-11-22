@@ -31,8 +31,8 @@ jobs:
       - name: Stage gated weights and deploy render function
         working-directory: video-pilot
         env:
-          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
-          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+          MODAL_TOKEN_ID: ${{ secrets[inputs.workspace == 'fallback' && 'MODAL_FALLBACK_TOKEN_ID' || 'MODAL_TOKEN_ID'] }}
+          MODAL_TOKEN_SECRET: ${{ secrets[inputs.workspace == 'fallback' && 'MODAL_FALLBACK_TOKEN_SECRET' || 'MODAL_TOKEN_SECRET'] }}
         run: |
           set -eu
           test -n "$MODAL_TOKEN_ID"
