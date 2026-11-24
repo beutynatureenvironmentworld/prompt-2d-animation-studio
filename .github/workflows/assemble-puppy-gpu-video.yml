@@ -20,6 +20,14 @@ jobs:
           cat gpu-archive/video.part1.b64 gpu-archive/video.part2.b64 | base64 --decode > demos/FunnyToonEver_Puppy_LTX23_GPU_Hybrid_6s_9x16.mp4
           echo "5bdcb14e6548612d6461fd56e41cff1f6acb988fa3ca25f4bd4b91b630bebabc  demos/FunnyToonEver_Puppy_LTX23_GPU_Hybrid_6s_9x16.mp4" | sha256sum --check
           test "$(stat -c %s demos/FunnyToonEver_Puppy_LTX23_GPU_Hybrid_6s_9x16.mp4)" -eq 134480
+      - name: Install FFmpeg and ffprobe
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Convert verified GPU hybrid into strict 9:16 portrait and test decoding
+        run: |
+          ffmpeg -hide_banner -loglevel error -y -i demos/FunnyToonEver_Puppy_LTX23_GPU_Hybrid_6s_9x16.mp4 -vf 'pad=432:768:0:6:black' -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -c:a copy demos/exact_9x16.mp4
+          mv demos/exact_9x16.mp4 demos/FunnyToonEver_Puppy_LTX23_GPU_Hybrid_6s_9x16.mp4
       - name: Verify actual H264 video stream and audio
         run: |
           ffprobe -v error -select_streams v:0 -show_entries stream=width,height,nb_frames -of compact demos/FunnyToonEver_Puppy_LTX23_GPU_Hybrid_6s_9x16.mp4
