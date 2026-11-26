@@ -1,9 +1,8 @@
 {
-  "gag": "door",
+  "gag": "race",
   "best": {
-    "score": 97.44,
+    "score": 98.56,
     "expressions_used": [
-      "effort",
       "focus",
       "grin",
       "neutral",
@@ -11,14 +10,14 @@
       "worried"
     ],
     "pupils_per_head": 2,
-    "fist_contact_error_px_measured_from_sprite": 2.75,
+    "fist_contact_error_px_measured_from_sprite": null,
     "motion_px": 105.61,
-    "contact_error_px_estimate": 2.75,
+    "contact_error_px_estimate": 0,
     "decoded_video_frame_difference": 15.935,
-    "decoded_fist_recoil_difference": 56.062,
-    "decoded_frames": 206,
+    "decoded_fist_recoil_difference": 0.0,
+    "decoded_frames": 170,
     "max_clipping_fraction": 0.0144,
-    "clipped_frames": 6,
+    "clipped_frames": 7,
     "warnings": [
       "whole-pose source still lacks independent arm/leg skeletal IK; authored fist anchor is calibrated",
       "one-pupil-per-eye overlay is validated in code; visual inspection of frames remains necessary"
@@ -35,12 +34,12 @@
   },
   "candidates": [
     {
-      "score": 97.44,
+      "score": 98.56,
       "passed": true,
       "video": "candidate_0.mp4"
     },
     {
-      "score": 96.72,
+      "score": 97.65,
       "passed": true,
       "video": "candidate_1.mp4"
     }
